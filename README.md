@@ -3,34 +3,17 @@ ai powered storytelling engine designed to boost booking conversions by selling 
 
 ## Getting started
 
-### Backend (Python Flask)
-
-```bash
-cd backend
-pip install -r requirements.txt
-python app.py
+backend is started with:
+```
+python backend/app.py
+```
+client is started with:
+```
+node client/client.js
 ```
 
-The API runs on `http://localhost:5000`.
+## Design Decisions
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/messages` | Fetch all messages |
-| POST | `/messages` | Add a message `{"role": "user", "text": "..."}` |
-| DELETE | `/messages` | Clear all messages |
+- Server is not stateless, it is stateful. Facilitating more than one user at a time is not within the scope. 
 
-### Client (Node.js CLI)
-
-```bash
-cd client
-node client.js
-```
-
-Type a message and press Enter to send it to the backend. Built-in commands:
-
-- `/history` — print all stored messages
-- `/clear` — delete all messages
-- `/quit` — exit
-
-Set `API_URL` environment variable to point at a different backend address (default: `http://localhost:5000`).
-
+- Is a game primarily. Specifically a simulation game. 
