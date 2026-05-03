@@ -59,12 +59,11 @@ function formatTurn(turn) {
   if (!turn || typeof turn !== "object") return "";
   const speaker = turn.speaker || "Unknown";
   const dialogue = turn.dialogue || "";
-  return speaker === "Narrator"
-    ? `\n[Narrator]\n${dialogue}\n`
-    : `\n${speaker}: ${dialogue}\n`;
+  return `\n[${speaker}]\n${dialogue}\n`;
 }
 
-function printNewTurns(state, previousLength = 0) {
+function printNewTurns(state, previousLength = 0, options = {}) {
+  const { includeUser = true } = options;
   const history = Array.isArray(state?.conversation_history)
     ? state.conversation_history
     : [];
@@ -74,7 +73,10 @@ function printNewTurns(state, previousLength = 0) {
     return;
   }
 
-  const turnsToPrint = history.slice(previousLength);
+  const turnsToPrint = history
+    .slice(previousLength)
+    .filter((turn) => includeUser || turn?.speaker !== "User");
+
   for (const turn of turnsToPrint) {
     process.stdout.write(formatTurn(turn));
   }
@@ -137,7 +139,7 @@ async function main() {
       : 0;
 
     conversationState = await sendUserTurn(conversationState, input);
-    printNewTurns(conversationState, previousLength);
+    printNewTurns(conversationState, previousLength, { includeUser: false });
     rl.prompt();
   });
 
