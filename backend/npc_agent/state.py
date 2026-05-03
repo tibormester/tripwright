@@ -19,17 +19,24 @@ class DialogueTurn:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize a dialogue turn into a JSON-compatible dictionary."""
-        return {
+        output = {
             "speaker": self.speaker,
             "dialogue": self.dialogue,
-            "thinking": self.thinking,
-            "flags": self.flags,
         }
+        if self.thinking:
+            output["thinking"] = self.thinking
+        if self.flags:
+            output["flags"] = self.flags
+        return output
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DialogueTurn:
-        """Create a dialogue turn from a JSON-compatible dictionary."""
-        raise NotImplementedError
+        return cls(
+            speaker=data.get("speaker", ""),
+            dialogue=data.get("dialogue", ""),
+            thinking=data.get("thinking"),
+            flags=data.get("flags"),
+        )
 
 
 @dataclass
@@ -42,9 +49,17 @@ class ConversationState:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the full conversation state into a JSON-compatible dictionary."""
-        raise NotImplementedError
+        return {
+            "location": self.location,
+            "npc_profile": self.npc_profile.to_dict(),
+            "conversation_history": [turn.to_dict() for turn in self.conversation_history],
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ConversationState:
         """Rebuild conversation state from a JSON-compatible dictionary."""
-        raise NotImplementedError
+        return cls(
+            location=data.get("location", ""),
+            npc_profile=NPCProfile.from_dict(data.get("npc_profile", {})),
+            conversation_history=[DialogueTurn.from_dict(turn) for turn in data.get("conversation_history", [])],
+        )
