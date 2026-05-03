@@ -8,7 +8,7 @@ from typing import Any
 
 from .conversation_state import DialogueTurn
 
-MODEL_NAME = "gpt-4-0613"
+DEFAULT_MODEL_NAME = "gpt-4o-mini"
 TAG_PATTERN = re.compile(r"<([a-zA-Z0-9_]+)>(.*?)</\1>", re.DOTALL)
 
 
@@ -56,12 +56,24 @@ def call_model(prompt: str) -> DialogueTurn:
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
 
+    model_name = os.getenv("OPENAI_MODEL", DEFAULT_MODEL_NAME)
     client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
-    )
+
+    request_kwargs = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": prompt}],
+        "response_format": {"type": "json_object"},
+    }
+
+    try:
+        response = client.chat.completions.create(**request_kwargs)
+    except Exception as exc:
+        message = str(exc)
+        if "response_format" not in message or "not supported" not in message:
+            raise
+
+        request_kwargs.pop("response_format", None)
+        response = client.chat.completions.create(**request_kwargs)
 
     raw_content = response.choices[0].message.content or "{}"
     payload = _parse_model_payload(raw_content)
