@@ -4,10 +4,10 @@ from dataclasses import dataclass
 
 from .npc_profile import NPCProfile
 from .state import ConversationState
-
+from .prompts.npc_prompts import OUTPUT_FORMAT, REALISM_CONSTRAINTS
 
 class PromptBuilder:
-    """Assembles model prompts from reusable instructions, profile data, and state."""
+    """Assembles npc model prompts from reusable instructions, profile data, and state."""
 
     def build_prompt(self, state: ConversationState) -> str:
         output = ""
@@ -27,5 +27,7 @@ class PromptBuilder:
     def _build_suffix(self, profile: NPCProfile) -> str:
         """Build the instruction block that enforces JSON output with dialogue, thoughts, and flags."""
         raise NotImplementedError
+    
+
 
     

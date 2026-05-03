@@ -3,8 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from .npc_profile import NPCProfile
-from .prompt_builder import PromptBuilder, PromptPackage
+from .prompt_builder import PromptBuilder
 from .state import ConversationState
 
 
@@ -14,11 +13,14 @@ class AgentTurnResult:
 
     dialogue: str
     thoughts: str
-    flags: list[str] = field(default_factory=list)
+    flags: str
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize the turn result into a JSON-compatible dictionary."""
-        raise NotImplementedError
+        return {
+            "dialogue": self.dialogue,
+            "thoughts": self.thoughts,
+            "flags": self.flags,
+        }
 
 
 class Agent:
@@ -28,18 +30,6 @@ class Agent:
         """Store the dependencies required to run the NPC agent."""
         raise NotImplementedError
 
-    def run_turn(self, state: ConversationState, profile: NPCProfile, user_input: str) -> AgentTurnResult:
+    def run_turn(self, state: ConversationState, user_input: str) -> AgentTurnResult:
         """Process one user input, call the model, update state, and return the NPC turn result."""
-        raise NotImplementedError
-
-    def build_prompt(self, state: ConversationState, profile: NPCProfile) -> PromptPackage:
-        """Create the prompt package for the current conversation turn."""
-        raise NotImplementedError
-
-    def parse_response(self, response_text: str) -> AgentTurnResult:
-        """Parse raw model output into normalized dialogue, thoughts, and flags."""
-        raise NotImplementedError
-
-    def apply_turn_result(self, state: ConversationState, result: AgentTurnResult) -> None:
-        """Apply parsed turn output back onto the mutable conversation state."""
         raise NotImplementedError

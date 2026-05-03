@@ -8,6 +8,7 @@ class NPCProfile:
 
     # core personality stuff, technically still fluff
     name: str
+    background: str
     role: str
 
     # personality stuff, just for fluff
@@ -34,9 +35,22 @@ class NPCProfile:
 
 
 
+from .prompts.love_patel import NAME, BACKGROUND, ROLE, SPEAKING_STYLE, PHYSICAL_DESCRIPTION, MENTAL_DESCRIPTION, EMOTIONAL_DESCRIPTION, LOCAL_FLAVOR, BELIEFS, OVERT_GOALS, SUBTLE_GOALS
 class StaticNPCProfileFactory:
     """Creates predefined NPC profiles for early prototyping and testing."""
 
     def create_hotel_receptionist(self) -> NPCProfile:
-        """Build a static hotel receptionist profile for the first prototype."""
-        raise NotImplementedError
+        love_patel = NPCProfile(
+            name=NAME,
+            background=BACKGROUND,
+            role=ROLE,
+            speaking_style=SPEAKING_STYLE,
+            physical_description=PHYSICAL_DESCRIPTION,
+            mental_description=MENTAL_DESCRIPTION,
+            emotional_description=EMOTIONAL_DESCRIPTION,
+            local_flavor=LOCAL_FLAVOR,
+            beliefs=BELIEFS,
+            overt_goals=OVERT_GOALS,
+            subtle_goals=SUBTLE_GOALS
+        )
+        return love_patel

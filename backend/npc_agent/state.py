@@ -19,7 +19,12 @@ class DialogueTurn:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize a dialogue turn into a JSON-compatible dictionary."""
-        raise NotImplementedError
+        return {
+            "speaker": self.speaker,
+            "dialogue": self.dialogue,
+            "thinking": self.thinking,
+            "flags": self.flags,
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DialogueTurn:
