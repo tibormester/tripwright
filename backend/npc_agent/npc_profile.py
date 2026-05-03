@@ -20,6 +20,23 @@ class NPCProfile:
     overt_goals: dict[str, str] = field(default_factory=dict)
     subtle_goals: dict[str, str] = field(default_factory=dict)
 
+    @staticmethod
+    def love_patel() -> "NPCProfile":
+        """Build the default hotel receptionist NPC used by the prototype."""
+        return NPCProfile(
+            name=NAME,
+            background=BACKGROUND,
+            role=ROLE,
+            speaking_style=SPEAKING_STYLE,
+            physical_description=PHYSICAL_DESCRIPTION,
+            mental_description=MENTAL_DESCRIPTION,
+            emotional_description=EMOTIONAL_DESCRIPTION,
+            local_flavor=LOCAL_FLAVOR,
+            beliefs=BELIEFS,
+            overt_goals=dict(OVERT_GOALS),
+            subtle_goals=dict(SUBTLE_GOALS),
+        )
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize the NPC profile into a JSON-compatible dictionary."""
         return {
@@ -73,19 +90,7 @@ class StaticNPCProfileFactory:
     """Creates predefined NPC profiles for early prototyping and testing."""
 
     def create_hotel_receptionist(self) -> NPCProfile:
-        return NPCProfile(
-            name=NAME,
-            background=BACKGROUND,
-            role=ROLE,
-            speaking_style=SPEAKING_STYLE,
-            physical_description=PHYSICAL_DESCRIPTION,
-            mental_description=MENTAL_DESCRIPTION,
-            emotional_description=EMOTIONAL_DESCRIPTION,
-            local_flavor=LOCAL_FLAVOR,
-            beliefs=BELIEFS,
-            overt_goals=OVERT_GOALS,
-            subtle_goals=SUBTLE_GOALS,
-        )
+        return NPCProfile.love_patel()
 
 
 def _normalize_goals(raw_goals: Any) -> dict[str, str]:
