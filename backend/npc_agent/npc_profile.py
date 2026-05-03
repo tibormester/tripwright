@@ -1,23 +1,27 @@
 from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import Any
 
-
 @dataclass
 class NPCProfile:
-    """Defines the character-specific content used to drive NPC behavior."""
+    """Maintains the character-specific content used to drive NPC behavior."""
 
+    # core personality stuff, technically still fluff
     name: str
     role: str
+
+    # personality stuff, just for fluff
     speaking_style: str
-    physical_traits: list[str] = field(default_factory=list)
-    mental_traits: list[str] = field(default_factory=list)
-    emotional_traits: list[str] = field(default_factory=list)
-    beliefs: list[str] = field(default_factory=list)
+    physical_description: str
+    mental_description: str
+    emotional_description: str
+    local_flavor: str
+    beliefs: str
+
+    # agent success criteria - used for evaluation and to help guide the agent
     overt_goals: list[str] = field(default_factory=list)
     subtle_goals: list[str] = field(default_factory=list)
-    local_flavor: list[str] = field(default_factory=list)
+    
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the NPC profile into a JSON-compatible dictionary."""
@@ -27,6 +31,7 @@ class NPCProfile:
     def from_dict(cls, data: dict[str, Any]) -> "NPCProfile":
         """Create an NPC profile from a JSON-compatible dictionary."""
         raise NotImplementedError
+
 
 
 class StaticNPCProfileFactory:

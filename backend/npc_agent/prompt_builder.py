@@ -6,29 +6,26 @@ from .npc_profile import NPCProfile
 from .state import ConversationState
 
 
-@dataclass
-class PromptPackage:
-    """Holds the assembled prompt content that will be sent to the model."""
-
-    system_prompt: str
-    user_prompt: str
-
-
 class PromptBuilder:
     """Assembles model prompts from reusable instructions, profile data, and state."""
 
-    def build_system_prompt(self, profile: NPCProfile) -> str:
+    def build_prompt(self, state: ConversationState) -> str:
+        output = ""
+        output.append(self._build_prefix(state.npc_profile))
+        output.append(self._build_conversation_context(state))
+        output.append(self._build_suffix(state.npc_profile))
+        return output
+    
+    def _build_prefix(self, profile: NPCProfile) -> str:
         """Build the stable instruction block for NPC identity, behavior, and realism constraints."""
         raise NotImplementedError
 
-    def build_runtime_context(self, state: ConversationState) -> str:
+    def _build_conversation_context(self, state: ConversationState) -> str:
         """Build the dynamic context block from scene text, state, flags, goals, and dialogue history."""
         raise NotImplementedError
 
-    def build_output_contract(self) -> str:
+    def _build_suffix(self, profile: NPCProfile) -> str:
         """Build the instruction block that enforces JSON output with dialogue, thoughts, and flags."""
         raise NotImplementedError
 
-    def build_prompt_package(self, profile: NPCProfile, state: ConversationState) -> PromptPackage:
-        """Assemble the final prompt package from profile content and runtime conversation state."""
-        raise NotImplementedError
+    
