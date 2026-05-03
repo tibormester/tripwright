@@ -26,12 +26,36 @@ class NPCProfile:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the NPC profile into a JSON-compatible dictionary."""
-        raise NotImplementedError
+        return {
+            "name": self.name,
+            "background": self.background,
+            "role": self.role,
+            "speaking_style": self.speaking_style,
+            "physical_description": self.physical_description,
+            "mental_description": self.mental_description,
+            "emotional_description": self.emotional_description,
+            "local_flavor": self.local_flavor,
+            "beliefs": self.beliefs,
+            "overt_goals": self.overt_goals,
+            "subtle_goals": self.subtle_goals,
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "NPCProfile":
         """Create an NPC profile from a JSON-compatible dictionary."""
-        raise NotImplementedError
+        return cls(
+            name=data.get("name", ""),
+            background=data.get("background", ""),
+            role=data.get("role", ""),
+            speaking_style=data.get("speaking_style", ""),
+            physical_description=data.get("physical_description", ""),
+            mental_description=data.get("mental_description", ""),
+            emotional_description=data.get("emotional_description", ""),
+            local_flavor=data.get("local_flavor", ""),
+            beliefs=data.get("beliefs", ""),
+            overt_goals=data.get("overt_goals", []),
+            subtle_goals=data.get("subtle_goals", []),
+        )
 
 
 
@@ -40,7 +64,7 @@ class StaticNPCProfileFactory:
     """Creates predefined NPC profiles for early prototyping and testing."""
 
     def create_hotel_receptionist(self) -> NPCProfile:
-        love_patel = NPCProfile(
+        return NPCProfile(
             name=NAME,
             background=BACKGROUND,
             role=ROLE,
@@ -53,4 +77,3 @@ class StaticNPCProfileFactory:
             overt_goals=OVERT_GOALS,
             subtle_goals=SUBTLE_GOALS
         )
-        return love_patel

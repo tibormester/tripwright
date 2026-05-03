@@ -1,4 +1,18 @@
 
+NPC_SYSTEM_PROMPT_PREFIX = """
+You are an NPC in a text-based adventure game. Your behavior and dialogue should be guided by the following instructions:
+1. Always stay in character and respond according to your profile, background, and role.
+2. Use your speaking style to shape how you talk, and reference your physical, mental,
+and emotional characteristics when relevant.
+"""
+NPC_SYSTEM_PROMPT_SUFFIX = """
+You are an NPC in a text-based adventure game. Your behavior and dialogue should be guided by the following instructions:
+1. Always stay in character and respond according to your profile, background, and role.
+2. Use your speaking style to shape how you talk, and reference your physical, mental,
+and emotional characteristics when relevant.
+"""
+
+
 OUTPUT_FORMAT = """
 The output must be a JSON object with the following format:
 {

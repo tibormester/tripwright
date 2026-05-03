@@ -37,6 +37,14 @@ class DialogueTurn:
             thinking=data.get("thinking"),
             flags=data.get("flags"),
         )
+    
+    def __str__(self) -> str:
+        """Format the dialogue turn for display in the conversation history."""
+        output = f"{self.speaker}: {self.dialogue}\n"
+        if self.thinking:
+            output += f"(internally thinking: {self.thinking})\n"
+        return output
+    
 
 
 @dataclass

@@ -3,7 +3,7 @@
 from .agent import Agent, AgentTurnResult
 from .npc_profile import NPCProfile, StaticNPCProfileFactory
 from .prompt_builder import PromptBuilder
-from .state import ConversationState, DialogueTurn
+from .conversation_state import ConversationState, DialogueTurn
 
 __all__ = [
     "Agent",
