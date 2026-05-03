@@ -7,15 +7,18 @@ from .prompts.npc_prompts import *
 class PromptBuilder:
     """Assembles npc model prompts from reusable instructions, profile data, and state."""
 
-    def build_prompt(self, state: ConversationState) -> str:
+    @staticmethod
+    def build_prompt(state: ConversationState) -> str:
+        """Constructs the full prompt for the npc by sandwiching the conversation history between a prefix and suffic prompt."""
         parts = [
-            self._build_prefix(state.npc_profile),
-            self._build_conversation_context(state),
-            self._build_suffix(state.npc_profile),
+            PromptBuilder._build_prefix(state.npc_profile),
+            PromptBuilder._build_conversation_context(state),
+            PromptBuilder._build_suffix(state.npc_profile),
         ]
         return "\n".join(part for part in parts if part)
     
-    def _build_prefix(self, profile: NPCProfile) -> str:
+    @staticmethod
+    def _build_prefix(profile: NPCProfile) -> str:
         """Build the stable instruction block for NPC identity, behavior, and realism constraints."""
         prompt = f"""
         {NPC_SYSTEM_PROMPT_PREFIX}    
@@ -35,11 +38,13 @@ class PromptBuilder:
         """
         return prompt
 
-    def _build_conversation_context(self, state: ConversationState) -> str:
+    @staticmethod
+    def _build_conversation_context(state: ConversationState) -> str:
         """Build the dynamic context block from scene text, state, flags, goals, and dialogue history."""
         return "".join(str(turn) for turn in state.conversation_history)
 
-    def _build_suffix(self, profile: NPCProfile) -> str:
+    @staticmethod
+    def _build_suffix(profile: NPCProfile) -> str:
         """Build the instruction block that enforces JSON output with dialogue, thoughts, and flags."""
         prompt = f"""
         {NPC_SYSTEM_PROMPT_SUFFIX}

@@ -23,10 +23,26 @@ class Agent:
 
     def run_turn(self, state: ConversationState, user_input: str) -> DialogueTurn:
         """Process one user input, call the model, update state, and return the NPC turn result."""
+        state.conversation_history.append(DialogueTurn(speaker="User", dialogue=user_input))
+
+        turn = self._call_model(self.prompt_builder.build_prompt(state)) 
+        self._process_goal_flags(turn.flags, state.npc_profile)
+
+        # check if the convo is over, and if so change the text to reflect that
+        if self._check_conversation_end(state.npc_profile):
+            turn = self.finish_conversation(state)
+        
+        # append to history and return update to client
+        state.conversation_history.append(turn)
+        return turn
+
+    def finish_conversation(self, state: ConversationState) -> DialogueTurn:
+        """Perform any cleanup or finalization when the conversation is complete."""
         raise NotImplementedError
 
-    def finish_conversation(self, state: ConversationState) -> None:
-        """Perform any cleanup or finalization when the conversation is complete."""
+    def _call_model(self, prompt: str) -> DialogueTurn:
+        """Call the language model with the given prompt and return the raw response."""
+        """TODO: make this call the openai api using the env api key,  then parse the response into the DialogueTurn object"""
         raise NotImplementedError
 
     def _process_goal_flags(self, flags: str, npc_profile: NPCProfile) -> None:
