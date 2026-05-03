@@ -1,67 +1,64 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
-
 from backend.npc_agent.npc_profile import NPCProfile
 
-from .prompt_builder import PromptBuilder
 from .conversation_state import ConversationState, DialogueTurn
+from .model import call_model
+from .prompt_builder import build_prompt
 
 
+def initialize_conversation(npc_profile: NPCProfile, location: str) -> ConversationState:
+    """Set up the initial conversation state with the NPC profile and starting location."""
+    state = ConversationState(location=location, npc_profile=npc_profile)
+    if location:
+        state.conversation_history.append(
+            DialogueTurn(
+                speaker="Narrator",
+                dialogue=f"A jet lagged traveler arrives at {location}, blinking his eyes wearily as he enters.",
+            )
+        )
+    return state
 
-class Agent:
-    """Executes one NPC turn using profile data, state, and prompt assembly logic."""
 
-    def __init__(self, prompt_builder: PromptBuilder, model_name: str) -> None:
-        """Store the dependencies required to run the NPC agent."""
-        raise NotImplementedError
+def run_turn(state: ConversationState, user_input: str) -> ConversationState:
+    """Process one user input, call the model, update state, and return the updated state."""
+    state.conversation_history.append(DialogueTurn(speaker="User", dialogue=user_input))
 
-    def initialize_conversation(self, npc_profile: NPCProfile, location: str) -> ConversationState:
-        """Set up the initial conversation state with the NPC profile and starting location."""
-        raise NotImplementedError
+    turn = call_model(build_prompt(state))
+    turn.speaker = state.npc_profile.name or turn.speaker
 
-    def run_turn(self, state: ConversationState, user_input: str) -> DialogueTurn:
-        """Process one user input, call the model, update state, and return the NPC turn result."""
-        state.conversation_history.append(DialogueTurn(speaker="User", dialogue=user_input))
+    if turn.flags:
+        _process_flags(turn.flags, state)
+        turn.flags = []
 
-        turn = self._call_model(self.prompt_builder.build_prompt(state)) 
-        self._process_goal_flags(turn.flags, state.npc_profile)
+    if _check_conversation_end(state.npc_profile):
+        turn = _finish_conversation(state)
+        if turn.flags:
+            _process_flags(turn.flags, state)
+            turn.flags = []
 
-        # check if the convo is over, and if so change the text to reflect that
-        if self._check_conversation_end(state.npc_profile):
-            turn = self.finish_conversation(state)
-        
-        # append to history and return update to client
-        state.conversation_history.append(turn)
-        return turn
+    state.conversation_history.append(turn)
+    return state
 
-    def finish_conversation(self, state: ConversationState) -> DialogueTurn:
-        """Perform any cleanup or finalization when the conversation is complete."""
-        raise NotImplementedError
 
-    def _call_model(self, prompt: str) -> DialogueTurn:
-        """Call the language model with the given prompt and return the raw response."""
-        """TODO: make this call the openai api using the env api key,  then parse the response into the DialogueTurn object"""
-        raise NotImplementedError
+def _finish_conversation(state: ConversationState) -> DialogueTurn:
+    """Perform any cleanup or finalization when the conversation is complete."""
+    return DialogueTurn(
+        speaker=state.npc_profile.name,
+        dialogue="I believe we've covered everything I needed to help with. If you'd like anything else, I'm still here.",
+        thinking="All current overt and subtle goals have been completed.",
+        flags=[("conversation_end", "")],
+    )
 
-    def _process_goal_flags(self, flags: str, npc_profile: NPCProfile) -> None:
-        """given a string containing potential goal flags, update the npc profile"""
-        raise NotImplementedError
-    
-    def _check_conversation_end(self, npc_profile: NPCProfile) -> bool:
-        """check if all goals have been achieved and the conversation should end"""
-        return not npc_profile.overt_goals and not npc_profile.subtle_goals
-"""
-when the goals are met, then the npc model response will emit a flag declaring it
 
-this agent class will look for the flag, then update the npc profile to remove that goal, so that in future conversation turns, it doesn't appear
+def _process_flags(flags: list[tuple[str, str]], state: ConversationState) -> None:
+    """Store tag values and remove matching completed goals."""
+    for tag_name, tag_value in flags:
+        state.hidden_metadata[tag_name] = tag_value
+        state.npc_profile.overt_goals.pop(tag_name, None)
+        state.npc_profile.subtle_goals.pop(tag_name, None)
 
-if all goals have been achieved then we finish the conversation.
 
-TODO: 1. update the npc prompts to better explain flags and goals
-TODO: 2. update the love_patel prompts to be better
-
-TODO: 0. implement the agent class to do the above
-
-"""
+def _check_conversation_end(npc_profile: NPCProfile) -> bool:
+    """Check if all goals have been achieved and the conversation should end."""
+    return not npc_profile.overt_goals and not npc_profile.subtle_goals

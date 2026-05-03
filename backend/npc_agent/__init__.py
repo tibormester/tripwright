@@ -1,16 +1,10 @@
 """Core structures for the NPC conversation prototype."""
 
-from .agent import Agent, AgentTurnResult
-from .npc_profile import NPCProfile, StaticNPCProfileFactory
-from .prompt_builder import PromptBuilder
-from .conversation_state import ConversationState, DialogueTurn
+from .agent import run_turn, initialize_conversation
+from .npc_profile import StaticNPCProfileFactory
 
 __all__ = [
-    "Agent",
-    "AgentTurnResult",
-    "ConversationState",
-    "DialogueTurn",
-    "NPCProfile",
-    "PromptBuilder",
     "StaticNPCProfileFactory",
+    "initialize_conversation",
+    "run_turn",
 ]

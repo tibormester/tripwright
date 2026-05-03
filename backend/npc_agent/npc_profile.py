@@ -1,28 +1,24 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
+
 
 @dataclass
 class NPCProfile:
     """Maintains the character-specific content used to drive NPC behavior."""
 
-    # core personality stuff, technically still fluff
     name: str
     background: str
     role: str
-
-    # personality stuff, just for fluff
     speaking_style: str
     physical_description: str
     mental_description: str
     emotional_description: str
     local_flavor: str
     beliefs: str
-
-    # agent success criteria - used for evaluation and to help guide the agent
-    overt_goals: list[str] = field(default_factory=list)
-    subtle_goals: list[str] = field(default_factory=list)
-    
+    overt_goals: dict[str, str] = field(default_factory=dict)
+    subtle_goals: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the NPC profile into a JSON-compatible dictionary."""
@@ -53,13 +49,26 @@ class NPCProfile:
             emotional_description=data.get("emotional_description", ""),
             local_flavor=data.get("local_flavor", ""),
             beliefs=data.get("beliefs", ""),
-            overt_goals=data.get("overt_goals", []),
-            subtle_goals=data.get("subtle_goals", []),
+            overt_goals=_normalize_goals(data.get("overt_goals", {})),
+            subtle_goals=_normalize_goals(data.get("subtle_goals", {})),
         )
 
 
+from .prompts.love_patel import (
+    BACKGROUND,
+    BELIEFS,
+    EMOTIONAL_DESCRIPTION,
+    LOCAL_FLAVOR,
+    MENTAL_DESCRIPTION,
+    NAME,
+    OVERT_GOALS,
+    PHYSICAL_DESCRIPTION,
+    ROLE,
+    SPEAKING_STYLE,
+    SUBTLE_GOALS,
+)
 
-from .prompts.love_patel import NAME, BACKGROUND, ROLE, SPEAKING_STYLE, PHYSICAL_DESCRIPTION, MENTAL_DESCRIPTION, EMOTIONAL_DESCRIPTION, LOCAL_FLAVOR, BELIEFS, OVERT_GOALS, SUBTLE_GOALS
+
 class StaticNPCProfileFactory:
     """Creates predefined NPC profiles for early prototyping and testing."""
 
@@ -75,5 +84,25 @@ class StaticNPCProfileFactory:
             local_flavor=LOCAL_FLAVOR,
             beliefs=BELIEFS,
             overt_goals=OVERT_GOALS,
-            subtle_goals=SUBTLE_GOALS
+            subtle_goals=SUBTLE_GOALS,
         )
+
+
+def _normalize_goals(raw_goals: Any) -> dict[str, str]:
+    """Allow goal dictionaries directly while tolerating older list-based data."""
+    if isinstance(raw_goals, dict):
+        return {str(key): str(value) for key, value in raw_goals.items()}
+
+    if isinstance(raw_goals, list):
+        goals: dict[str, str] = {}
+        for goal in raw_goals:
+            description = str(goal)
+            goal_name = _slugify(description)
+            goals[goal_name] = description
+        return goals
+
+    return {}
+
+
+def _slugify(value: str) -> str:
+    return "_".join("".join(ch.lower() if ch.isalnum() else " " for ch in value).split())

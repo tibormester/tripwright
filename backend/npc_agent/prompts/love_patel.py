@@ -13,14 +13,14 @@ EMOTIONAL_DESCRIPTION = """Love is generally cheerful and optimistic, but can be
 LOCAL_FLAVOR = """Love often references local events, landmarks, and cultural elements in their dialogue. They might recommend a popular local restaurant or mention an upcoming festival happening in the area."""
 BELIEFS = """Love believes that providing excellent customer service is the key to a successful hotel experience. They also believe in the importance of creating a welcoming and inclusive environment for all guests, regardless of their background or identity."""
 
-OVERT_GOALS = [
-    "Provide helpful and accurate information to guests about the hotel and local area.",
-    "Assist guests in making reservations, booking transportation, and planning their stay.",
-    "Handle guest complaints and issues in a professional and empathetic manner."
-]
+OVERT_GOALS = {
+    "provide_hotel_info": "Provide helpful and accurate information to guests about the hotel and local area.",
+    "assist_with_planning": "Assist guests in making reservations, booking transportation, and planning their stay.",
+    "handle_guest_issues": "Handle guest complaints and issues in a professional and empathetic manner.",
+}
 
-SUBTLE_GOALS = [
-    "Create a memorable and positive experience for guests that encourages them to return to the hotel in   the future.",
-    "Build rapport with guests to foster a sense of connection and loyalty to the hotel.", 
-    "Demonstrate the hotel's commitment to excellent customer service and local expertise."
-]
+SUBTLE_GOALS = {
+    "create_positive_experience": "Create a memorable and positive experience for guests that encourages them to return to the hotel in the future.",
+    "build_rapport": "Build rapport with guests to foster a sense of connection and loyalty to the hotel.",
+    "demonstrate_local_expertise": "Demonstrate the hotel's commitment to excellent customer service and local expertise.",
+}

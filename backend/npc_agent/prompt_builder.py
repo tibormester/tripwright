@@ -1,61 +1,104 @@
 from __future__ import annotations
 
+from .conversation_state import ConversationState
 from .npc_profile import NPCProfile
-from .conversation_state import ConversationState    
 from .prompts.npc_prompts import *
 
-class PromptBuilder:
-    """Assembles npc model prompts from reusable instructions, profile data, and state."""
 
-    @staticmethod
-    def build_prompt(state: ConversationState) -> str:
-        """Constructs the full prompt for the npc by sandwiching the conversation history between a prefix and suffic prompt."""
-        parts = [
-            PromptBuilder._build_prefix(state.npc_profile),
-            PromptBuilder._build_conversation_context(state),
-            PromptBuilder._build_suffix(state.npc_profile),
-        ]
-        return "\n".join(part for part in parts if part)
-    
-    @staticmethod
-    def _build_prefix(profile: NPCProfile) -> str:
-        """Build the stable instruction block for NPC identity, behavior, and realism constraints."""
-        prompt = f"""
-        {NPC_SYSTEM_PROMPT_PREFIX}    
-        {profile.name}
-        {profile.background}
-        {profile.role}
-        {profile.speaking_style}
-        {profile.physical_description}
-        {profile.mental_description}
-        {profile.emotional_description}
-        {profile.local_flavor}
-        {profile.beliefs}
-        Overt goals: {', '.join(profile.overt_goals)}
-        Subtle goals: {', '.join(profile.subtle_goals)}
-        {REALISM_CONSTRAINTS}
-        {OUTPUT_FORMAT}
-        """
-        return prompt
-
-    @staticmethod
-    def _build_conversation_context(state: ConversationState) -> str:
-        """Build the dynamic context block from scene text, state, flags, goals, and dialogue history."""
-        return "".join(str(turn) for turn in state.conversation_history)
-
-    @staticmethod
-    def _build_suffix(profile: NPCProfile) -> str:
-        """Build the instruction block that enforces JSON output with dialogue, thoughts, and flags."""
-        prompt = f"""
-        {NPC_SYSTEM_PROMPT_SUFFIX}
-        Overt goals: {', '.join(profile.overt_goals)}
-        Subtle goals: {', '.join(profile.subtle_goals)}
-        {REALISM_CONSTRAINTS}
-        {OUTPUT_FORMAT}
-        {OUTPUT_FORMAT}
-        """
-        return prompt
-    
+def build_prompt(state: ConversationState) -> str:
+    """Construct the full prompt for the npc by sandwiching the conversation history between a prefix and suffix prompt."""
+    parts = [
+        _build_prefix(state.npc_profile),
+        _build_runtime_context(state),
+        _build_suffix(state.npc_profile),
+    ]
+    return "\n".join(part for part in parts if part)
 
 
-    
+def _build_prefix(profile: NPCProfile) -> str:
+    """Build the stable instruction block for NPC identity, behavior, and output rules."""
+    return f"""
+    {NPC_SYSTEM_PROMPT_PREFIX}
+
+    NPC Profile
+    Name: {profile.name}
+    Background: {profile.background}
+    Role: {profile.role}
+    Speaking style: {profile.speaking_style}
+    Physical description: {profile.physical_description}
+    Mental description: {profile.mental_description}
+    Emotional description: {profile.emotional_description}
+    Local flavor: {profile.local_flavor}
+    Beliefs: {profile.beliefs}
+
+    Overt goals
+    {_format_goals(profile.overt_goals)}
+
+    Subtle goals
+    {_format_goals(profile.subtle_goals)}
+
+    {REALISM_CONSTRAINTS}
+    {FLAG_FORMAT_RULES}
+    {OUTPUT_FORMAT}
+    """
+
+
+def _build_runtime_context(state: ConversationState) -> str:
+    """Build the runtime context block from location, hidden metadata, and visible dialogue history."""
+    history = "".join(str(turn) for turn in state.conversation_history)
+    hidden_metadata = _format_metadata(state.hidden_metadata)
+    return f"""
+    Runtime context
+    Current location: {state.location}
+
+    Hidden metadata already known
+    {hidden_metadata}
+
+    Important rule: tags are one-time machine signals. Do not repeat old tags just because they already exist in hidden metadata.
+    Only emit a tag if it is newly earned or newly discovered in this turn.
+
+    Conversation so far
+    {history}
+    """
+
+
+def _build_suffix(profile: NPCProfile) -> str:
+    """Build the instruction block that reinforces exact goal-tag usage and strict JSON output."""
+    return f"""
+    {NPC_SYSTEM_PROMPT_SUFFIX}
+
+    Remaining overt goals
+    {_format_goals(profile.overt_goals)}
+
+    Remaining subtle goals
+    {_format_goals(profile.subtle_goals)}
+
+    Goal completion rule
+    - If you complete a goal this turn, emit exactly one tag whose name exactly matches that goal name.
+    - Example: if the completed goal name is build_rapport, emit <build_rapport></build_rapport>
+
+    Metadata rule
+    - If you want to store hidden metadata, emit a tag with the value between the opening and closing tags.
+    - Example: <coffee_shop>pike's place</coffee_shop>
+
+    Output rule
+    - Respond with JSON only.
+    - Do not wrap the JSON in markdown.
+    - Do not explain the tags.
+    - Put all tags in the flags string field.
+
+    {FLAG_FORMAT_RULES}
+    {OUTPUT_FORMAT}
+    """
+
+
+def _format_goals(goals: dict[str, str]) -> str:
+    if not goals:
+        return "- none"
+    return "\n".join(f"- {goal_name}: {description}" for goal_name, description in goals.items())
+
+
+def _format_metadata(metadata: dict[str, str]) -> str:
+    if not metadata:
+        return "- none"
+    return "\n".join(f"- {key}: {value or '[present]'}" for key, value in metadata.items())
