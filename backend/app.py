@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from flask import Flask, jsonify, request
 
-from backend.npc_agent.agent import initialize_conversation, run_turn, start_conversation
-from backend.npc_agent.conversation_state import ConversationState
-from backend.npc_agent.npc_profile import NPCProfile
+from npc_agent.agent import initialize_conversation, run_turn, start_conversation
+from npc_agent.conversation_state import ConversationState
+from npc_agent.npc_profile import NPCProfile
 
 app = Flask(__name__)
 

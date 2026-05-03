@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backend.npc_agent.npc_profile import NPCProfile
+from .npc_profile import NPCProfile
 
 from .conversation_state import ConversationState, DialogueTurn
 from .model import call_model

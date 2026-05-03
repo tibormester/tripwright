@@ -5,7 +5,7 @@ import os
 import re
 from typing import Any
 
-from backend.npc_agent.conversation_state import DialogueTurn
+from .conversation_state import DialogueTurn
 
 MODEL_NAME = "gpt-4-0613"
 TAG_PATTERN = re.compile(r"<([a-zA-Z0-9_]+)>(.*?)</\1>", re.DOTALL)
