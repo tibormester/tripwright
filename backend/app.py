@@ -5,10 +5,11 @@ import logging
 from flask import Flask, jsonify, request
 
 from npc_agent.agent import initialize_conversation, run_turn, start_conversation
+from npc_agent.assets import build_rendering_context, build_static_asset_manifest
 from npc_agent.conversation_state import ConversationState, DialogueTurn
 from npc_agent.scenes import get_initial_scene
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 
 if not app.logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
@@ -81,9 +82,25 @@ def _log_conversation_state(
     app.logger.info("\n%s", log_message)
 
 
+def _serialize_state_response(state: ConversationState):
+    payload = state.to_dict()
+    payload["rendering"] = build_rendering_context(state)
+    return jsonify(payload)
+
+
+@app.get("/")
+def index():
+    return app.send_static_file("index.html")
+
+
 @app.get("/health")
 def health() -> tuple[dict[str, str], int]:
     return {"status": "ok"}, 200
+
+
+@app.get("/assets/manifest")
+def assets_manifest():
+    return jsonify(build_static_asset_manifest())
 
 
 @app.post("/conversation/initialize")
@@ -105,7 +122,7 @@ def conversation_initialize():
         app.logger.exception("conversation_initialize failed")
         return jsonify({"error": str(exc)}), 500
 
-    return jsonify(state.to_dict())
+    return _serialize_state_response(state)
 
 
 @app.post("/conversation/turn")
@@ -132,7 +149,7 @@ def conversation_turn():
         app.logger.exception("conversation_turn failed")
         return jsonify({"error": str(exc)}), 500
 
-    return jsonify(updated_state.to_dict())
+    return _serialize_state_response(updated_state)
 
 
 if __name__ == "__main__":
