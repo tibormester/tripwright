@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from flask import Flask, jsonify, request
 
-from npc_agent.agent import initialize_conversation, run_turn, start_conversation
-from npc_agent.assets import build_rendering_context, build_static_asset_manifest
-from npc_agent.conversation_state import ConversationState, DialogueTurn
-from npc_agent.scenes import get_initial_scene
+try:
+    from backend.npc_agent.agent import initialize_conversation, run_turn, start_conversation
+    from backend.npc_agent.assets import build_rendering_context, build_static_asset_manifest
+    from backend.npc_agent.conversation_state import ConversationState, DialogueTurn
+    from backend.npc_agent.scenes import get_initial_scene
+except ModuleNotFoundError:
+    from npc_agent.agent import initialize_conversation, run_turn, start_conversation
+    from npc_agent.assets import build_rendering_context, build_static_asset_manifest
+    from npc_agent.conversation_state import ConversationState, DialogueTurn
+    from npc_agent.scenes import get_initial_scene
 
-app = Flask(__name__, static_folder="static", static_url_path="/static")
+PUBLIC_DIR = Path(__file__).resolve().parents[1] / "public"
+app = Flask(__name__, static_folder=str(PUBLIC_DIR), static_url_path="")
 
 if not app.logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")

@@ -10,8 +10,8 @@ from .npc_profile import NPCProfile
 from .prompts.defaults import TRAVEL_SELECTION_SUFFIX, is_travel_selection_location
 from .scenes import TRAVEL_DESTINATIONS, SceneDefinition, get_initial_scene
 
-STATIC_ROOT = Path(__file__).resolve().parents[1] / "static"
-GENERATED_ROOT = STATIC_ROOT / "generated"
+PUBLIC_ROOT = Path(__file__).resolve().parents[2] / "public"
+GENERATED_ROOT = PUBLIC_ROOT / "generated"
 SCENE_DIR = GENERATED_ROOT / "scenes"
 NPC_DIR = GENERATED_ROOT / "npcs"
 
@@ -37,15 +37,15 @@ class ImageAssetSpec:
 
     @property
     def output_path(self) -> Path:
-        return STATIC_ROOT / self.relative_path
+        return PUBLIC_ROOT / self.relative_path
 
     @property
     def metadata_path(self) -> Path:
-        return STATIC_ROOT / self.metadata_relative_path
+        return PUBLIC_ROOT / self.metadata_relative_path
 
     @property
     def url_path(self) -> str:
-        return f"/static/{self.relative_path.replace('\\', '/')}"
+        return f"/{self.relative_path.replace('\\', '/')}"
 
 
 def ensure_generated_directories() -> None:

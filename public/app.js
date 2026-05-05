@@ -11,8 +11,8 @@ const state = {
 };
 
 const SPEAKER_AVATARS = {
-  User: "/static/ui/user-avatar.svg",
-  Narrator: "/static/ui/narrator-avatar.svg",
+  User: "/ui/user-avatar.svg",
+  Narrator: "/ui/narrator-avatar.svg",
 };
 
 const LOADING_FRAMES = ["...", "..", ".", ".."];

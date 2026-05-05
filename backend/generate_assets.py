@@ -8,12 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import urlopen
 
-from npc_agent.assets import (
+from backend.npc_agent.assets import (
     ImageAssetSpec,
     build_static_asset_specs,
     ensure_generated_directories,
 )
-from npc_agent.openai_utils import load_env_file
+from backend.npc_agent.openai_utils import load_env_file
 
 DEFAULT_IMAGE_MODEL = "gpt-image-1"
 DEFAULT_IMAGE_SIZE = "1024x1024"
