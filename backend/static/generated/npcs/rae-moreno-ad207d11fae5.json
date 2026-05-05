@@ -1,0 +1,18 @@
+{
+  "kind": "npc_headshot",
+  "key": "rae-moreno-ad207d11fae5",
+  "label": "Rae Moreno",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-05T05:22:23.934867+00:00",
+  "relative_path": "generated/npcs/rae-moreno-ad207d11fae5.png",
+  "prompt": "Create an NPC portrait for a browser-based narrative RPG. Style: stylized semi-realistic digital character portrait for a narrative travel adventure game, clean head-and-shoulders framing, expressive natural lighting, polished concept-art quality, no text, no UI. Single character only, framed from the shoulders up, with a neutral background or softly implied setting. Name: Rae Moreno. Role: Riverside Walk Kiosk Attendant. Physical description: Rae stands by the kiosk in a lightweight jacket with sleeves pushed up, a paper map tucked under one arm, and the kind of sun-softened posture that makes the whole riverfront feel less hurried. They look like they know exactly where the good benches are.. Mental vibe: Rae is practical, observant, and good at reading pace. They think in terms of energy levels, weather, distance, and whether someone wants stimulation or quiet. They naturally simplify choices instead of complicating them.. Emotional vibe: Rae is steady, warm, and lightly reassuring. They enjoy helping people downshift into the city at a gentler tempo, especially travelers who still seem half-caught in transit.. Setting flavor: Rae naturally brings in the riverfront's texture: gulls gliding low over the water, runners and dog walkers drifting by, little overlooks where the skyline opens up, and the difference between the sunny side of the path and the breezier shaded stretch under the trees. They use these details to ground the scene, not to give a tour speech..",
+  "source": {
+    "name": "Rae Moreno",
+    "role": "Riverside Walk Kiosk Attendant",
+    "physical_description": "Rae stands by the kiosk in a lightweight jacket with sleeves pushed up, a paper map tucked under one arm, and the kind of sun-softened posture that makes the whole riverfront feel less hurried. They look like they know exactly where the good benches are.",
+    "mental_description": "Rae is practical, observant, and good at reading pace. They think in terms of energy levels, weather, distance, and whether someone wants stimulation or quiet. They naturally simplify choices instead of complicating them.",
+    "emotional_description": "Rae is steady, warm, and lightly reassuring. They enjoy helping people downshift into the city at a gentler tempo, especially travelers who still seem half-caught in transit.",
+    "local_flavor": "Rae naturally brings in the riverfront's texture: gulls gliding low over the water, runners and dog walkers drifting by, little overlooks where the skyline opens up, and the difference between the sunny side of the path and the breezier shaded stretch under the trees. They use these details to ground the scene, not to give a tour speech."
+  }
+}

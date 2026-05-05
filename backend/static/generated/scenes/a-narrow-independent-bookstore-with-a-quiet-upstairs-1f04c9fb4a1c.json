@@ -1,0 +1,14 @@
+{
+  "kind": "scene_background",
+  "key": "a-narrow-independent-bookstore-with-a-quiet-upstairs-1f04c9fb4a1c",
+  "label": "Bookstore Lounge",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-05T05:23:04.545349+00:00",
+  "relative_path": "generated/scenes/a-narrow-independent-bookstore-with-a-quiet-upstairs-1f04c9fb4a1c.png",
+  "prompt": "Create a scene background image for a browser-based narrative RPG. Style: cinematic semi-realistic digital illustration for a narrative travel adventure game, rich environmental storytelling, polished concept-art quality, grounded lighting, no text, no UI. Focus on the environment and mood rather than a character portrait. If people appear, they should be small and incidental in the composition. Location: a narrow independent bookstore with a quiet upstairs lounge. Narration: A bell gives a soft, tired ring as you step into the bookstore, where tall shelves narrow the room into calm little corridors of paper, lamp light, and dust-warm wood. Somewhere upstairs, a chair scrapes gently against the floorboards. On the main level, Eli Navarro glances up from a returns cart with a thoughtful expression that suggests they already know how to make the place feel quieter..",
+  "source": {
+    "location": "a narrow independent bookstore with a quiet upstairs lounge",
+    "narrator_text": "A bell gives a soft, tired ring as you step into the bookstore, where tall shelves narrow the room into calm little corridors of paper, lamp light, and dust-warm wood. Somewhere upstairs, a chair scrapes gently against the floorboards. On the main level, Eli Navarro glances up from a returns cart with a thoughtful expression that suggests they already know how to make the place feel quieter."
+  }
+}

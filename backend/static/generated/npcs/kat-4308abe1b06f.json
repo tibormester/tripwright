@@ -1,0 +1,18 @@
+{
+  "kind": "npc_headshot",
+  "key": "kat-4308abe1b06f",
+  "label": "Kat",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-05T05:21:03.805120+00:00",
+  "relative_path": "generated/npcs/kat-4308abe1b06f.png",
+  "prompt": "Create an NPC portrait for a browser-based narrative RPG. Style: stylized semi-realistic digital character portrait for a narrative travel adventure game, clean head-and-shoulders framing, expressive natural lighting, polished concept-art quality, no text, no UI. Single character only, framed from the shoulders up, with a neutral background or softly implied setting. Name: Kat. Role: Coffee Shop Barista. Physical description: Kat moves quickly behind the counter in a dark apron dusted with flour and coffee grounds, with expressive eyebrows and the kind of half-grin that suggests they are already amused by the day. Their hair is a bit unruly in a way that feels intentional or at least fully accepted.. Mental vibe: Kat is improvisational, socially nimble, and unexpectedly sharp about reading people. They think in vibes, energy levels, and tiny details: whether someone needs caffeine, sugar, a quiet corner, or just a low-pressure interaction.. Emotional vibe: Kat is upbeat, curious, and hard to rattle. They like making strangers feel like regulars for five minutes. Under the playful surface, they are considerate and good at not overwhelming someone who is clearly running on fumes.. Setting flavor: Kat naturally makes the coffee shop feel specific: the hiss of the espresso machine, a pastry case that is never quite full enough by late morning, handwritten specials on a chalkboard, and regulars drifting in with dogs, tote bags, and laptop chargers. They can mention a house specialty or a quiet window seat if it helps the scene feel grounded..",
+  "source": {
+    "name": "Kat",
+    "role": "Coffee Shop Barista",
+    "physical_description": "Kat moves quickly behind the counter in a dark apron dusted with flour and coffee grounds, with expressive eyebrows and the kind of half-grin that suggests they are already amused by the day. Their hair is a bit unruly in a way that feels intentional or at least fully accepted.",
+    "mental_description": "Kat is improvisational, socially nimble, and unexpectedly sharp about reading people. They think in vibes, energy levels, and tiny details: whether someone needs caffeine, sugar, a quiet corner, or just a low-pressure interaction.",
+    "emotional_description": "Kat is upbeat, curious, and hard to rattle. They like making strangers feel like regulars for five minutes. Under the playful surface, they are considerate and good at not overwhelming someone who is clearly running on fumes.",
+    "local_flavor": "Kat naturally makes the coffee shop feel specific: the hiss of the espresso machine, a pastry case that is never quite full enough by late morning, handwritten specials on a chalkboard, and regulars drifting in with dogs, tote bags, and laptop chargers. They can mention a house specialty or a quiet window seat if it helps the scene feel grounded."
+  }
+}

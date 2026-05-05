@@ -2,6 +2,7 @@
 "use strict";
 
 const http = require("http");
+const https = require("https");
 const readline = require("readline");
 
 const BASE_URL = process.env.API_URL || "http://localhost:5000";
@@ -9,85 +10,140 @@ const BASE_URL = process.env.API_URL || "http://localhost:5000";
 function request(method, path, body) {
   return new Promise((resolve, reject) => {
     const url = new URL(path, BASE_URL);
+    const transport = url.protocol === "https:" ? https : http;
     const payload = body ? JSON.stringify(body) : null;
+
     const options = {
       hostname: url.hostname,
       port: url.port || (url.protocol === "https:" ? 443 : 80),
-      path: url.pathname,
+      path: `${url.pathname}${url.search}`,
       method,
       headers: { "Content-Type": "application/json" },
     };
+
     if (payload) {
       options.headers["Content-Length"] = Buffer.byteLength(payload);
     }
-    const req = http.request(options, (res) => {
+
+    const req = transport.request(options, (res) => {
       let data = "";
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => {
+        let parsed = data;
         try {
-          resolve(JSON.parse(data));
+          parsed = data ? JSON.parse(data) : null;
         } catch {
-          resolve(data);
+          // keep raw text
         }
+
+        if (res.statusCode >= 400) {
+          const message =
+            parsed && typeof parsed === "object" && parsed.error
+              ? parsed.error
+              : `Request failed with status ${res.statusCode}`;
+          reject(new Error(message));
+          return;
+        }
+
+        resolve(parsed);
       });
     });
+
     req.on("error", reject);
     if (payload) req.write(payload);
     req.end();
   });
 }
 
-async function printHistory() {
-  const msgs = await request("GET", "/messages");
-  if (!Array.isArray(msgs) || msgs.length === 0) {
-    console.log("(no messages yet)");
+function formatTurn(turn) {
+  if (!turn || typeof turn !== "object") return "";
+  const speaker = turn.speaker || "Unknown";
+  const dialogue = turn.dialogue || "";
+  return `\n[${speaker}]\n${dialogue}\n`;
+}
+
+function printNewTurns(state, previousLength = 0, options = {}) {
+  const { includeUser = true } = options;
+  const history = Array.isArray(state?.conversation_history)
+    ? state.conversation_history
+    : [];
+
+  if (history.length === 0) {
+    console.log("(no conversation yet)");
     return;
   }
-  for (const m of msgs) {
-    console.log(`[${m.role}] ${m.text}`);
+
+  const turnsToPrint = history
+    .slice(previousLength)
+    .filter((turn) => includeUser || turn?.speaker !== "User");
+
+  for (const turn of turnsToPrint) {
+    process.stdout.write(formatTurn(turn));
   }
 }
 
-async function main() {
-  console.log("TripWright CLI — type a message and press Enter.");
-  console.log("Commands: /history  /clear  /quit\n");
+async function initializeConversation() {
+  return request("POST", "/conversation/initialize", {});
+}
 
-  await printHistory();
+async function sendUserTurn(state, userInput) {
+  return request("POST", "/conversation/turn", {
+    state,
+    user_input: userInput,
+  });
+}
+
+async function main() {
+  console.log("TripWright NPC CLI");
+  console.log("Commands: /restart  /history  /quit  /command <1|2|3>\n");
+
+  let conversationState = await initializeConversation();
+  printNewTurns(conversationState, 0);
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: "> ",
   });
+
   rl.prompt();
 
   rl.on("line", async (line) => {
     const input = line.trim();
+
     if (!input) {
       rl.prompt();
       return;
     }
+
     if (input === "/quit") {
       rl.close();
       return;
     }
+
     if (input === "/history") {
-      await printHistory();
+      printNewTurns(conversationState, 0);
       rl.prompt();
       return;
     }
-    if (input === "/clear") {
-      await request("DELETE", "/messages");
-      console.log("History cleared.");
+
+    if (input === "/restart") {
+      conversationState = await initializeConversation();
+      printNewTurns(conversationState, 0);
       rl.prompt();
       return;
     }
-    const result = await request("POST", "/messages", { role: "user", text: input });
-    if (result.error) {
-      console.error("Error:", result.error);
-    } else {
-      console.log(`[${result.role}] ${result.text}`);
-    }
+
+    const previousLength = Array.isArray(conversationState?.conversation_history)
+      ? conversationState.conversation_history.length
+      : 0;
+
+    conversationState = await sendUserTurn(conversationState, input);
+    const nextHistoryLength = Array.isArray(conversationState?.conversation_history)
+      ? conversationState.conversation_history.length
+      : 0;
+    const printOffset = nextHistoryLength < previousLength ? 0 : previousLength;
+    printNewTurns(conversationState, printOffset, { includeUser: false });
     rl.prompt();
   });
 
@@ -98,6 +154,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Failed to connect to backend:", err.message);
+  console.error("Failed to run client:", err.message);
   process.exit(1);
 });

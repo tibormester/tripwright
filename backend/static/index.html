@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TripWright</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="scene-stage" id="scene-stage">
+      <div class="scene-tint"></div>
+      <div class="scene-fade-overlay" id="scene-fade-overlay">
+        <div class="scene-fade-loading" id="scene-fade-loading">...</div>
+      </div>
+
+      <main class="game-shell">
+        <header class="scene-banner parchment-panel">
+          <div class="scene-banner-copy">
+            <p class="eyebrow">Current Scene</p>
+            <h1 id="scene-label">Loading…</h1>
+            <p id="scene-location"></p>
+          </div>
+
+          <div class="scene-banner-side">
+            <div class="current-npc">
+              <p class="eyebrow">Present Company</p>
+              <h2 id="npc-name">—</h2>
+              <p id="npc-role">—</p>
+            </div>
+
+            <div class="banner-actions">
+              <section class="status-row">
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-text">Connecting…</span>
+              </section>
+              <button id="restart-button" class="secondary-button" type="button">Restart</button>
+            </div>
+          </div>
+        </header>
+
+        <section class="chat-panel parchment-panel">
+          <section class="chat-log" id="chat-log" aria-live="polite"></section>
+        </section>
+
+        <section class="travel-panel parchment-panel" id="travel-panel" hidden>
+          <div class="travel-panel-header">
+            <p class="eyebrow">Choose the next location</p>
+            <h2>Where do you want to go next?</h2>
+            <p class="travel-intro">Pick a destination below to continue.</p>
+          </div>
+          <div class="travel-options" id="travel-options"></div>
+        </section>
+
+        <form class="composer parchment-panel" id="composer">
+          <div class="composer-row">
+            <textarea
+              id="user-input"
+              rows="3"
+              placeholder="Talk to the character..."
+            ></textarea>
+            <button id="send-button" type="submit">Send</button>
+          </div>
+          <div class="composer-actions">
+            <span class="hint">Enter to send · Shift+Enter for newline</span>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <template id="message-template">
+      <article class="message">
+        <div class="message-avatar" hidden>
+          <img class="message-avatar-image" alt="Character portrait" hidden />
+          <div class="message-avatar-fallback" hidden></div>
+        </div>
+        <div class="message-content">
+          <div class="message-meta"></div>
+          <div class="message-body"></div>
+        </div>
+      </article>
+    </template>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
