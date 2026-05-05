@@ -7,63 +7,52 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <div class="shell">
-      <aside class="visual-panel">
-        <div class="scene-card">
-          <div class="scene-image" id="scene-image">
-            <div class="scene-overlay"></div>
-            <div class="scene-copy">
-              <p class="eyebrow">Current Scene</p>
-              <h1 id="scene-label">Loading…</h1>
-              <p id="scene-location"></p>
+    <div class="scene-stage" id="scene-stage">
+      <div class="scene-tint"></div>
+
+      <main class="game-shell">
+        <header class="scene-banner parchment-panel">
+          <div class="scene-banner-copy">
+            <p class="eyebrow">Current Scene</p>
+            <h1 id="scene-label">Loading…</h1>
+            <p id="scene-location"></p>
+          </div>
+
+          <div class="scene-banner-side">
+            <div class="current-npc">
+              <p class="eyebrow">Present Company</p>
+              <h2 id="npc-name">—</h2>
+              <p id="npc-role">—</p>
             </div>
-          </div>
-        </div>
 
-        <div class="npc-card">
-          <div class="npc-portrait-wrap">
-            <img id="npc-portrait" alt="NPC portrait" hidden />
-            <div class="image-fallback" id="npc-fallback">No portrait generated yet</div>
-          </div>
-          <div class="npc-copy">
-            <p class="eyebrow">You are talking to</p>
-            <h2 id="npc-name">—</h2>
-            <p id="npc-role">—</p>
-          </div>
-        </div>
-
-        <div class="travel-panel" id="travel-panel" hidden>
-          <div class="travel-panel-header">
-            <p class="eyebrow">Next destination</p>
-            <h2>Choose where to go next</h2>
-          </div>
-          <div class="travel-options" id="travel-options"></div>
-        </div>
-      </aside>
-
-      <main class="chat-panel">
-        <header class="chat-header">
-          <div>
-            <p class="eyebrow">TripWright</p>
-            <h2>NPC Conversation</h2>
-          </div>
-          <div class="header-actions">
-            <button id="restart-button" class="secondary-button" type="button">Restart</button>
+            <div class="banner-actions">
+              <section class="status-row">
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-text">Connecting…</span>
+              </section>
+              <button id="restart-button" class="secondary-button" type="button">Restart</button>
+            </div>
           </div>
         </header>
 
-        <section class="status-row">
-          <span class="status-dot" id="status-dot"></span>
-          <span id="status-text">Connecting…</span>
+        <section class="chat-panel parchment-panel">
+          <section class="chat-log" id="chat-log" aria-live="polite"></section>
         </section>
 
-        <section class="chat-log" id="chat-log" aria-live="polite"></section>
+        <section class="travel-panel parchment-panel" id="travel-panel" hidden>
+          <div class="travel-panel-header">
+            <p class="eyebrow">Choose the next location</p>
+            <h2>Where do you want to go next?</h2>
+            <p class="travel-intro">Pick a destination below to continue.</p>
+          </div>
+          <div class="travel-options" id="travel-options"></div>
+        </section>
 
-        <form class="composer" id="composer">
+        <form class="composer parchment-panel" id="composer">
           <textarea
             id="user-input"
             rows="3"
-            placeholder="Talk to the NPC, or use /command 1, /command 2, ... when choosing a destination."
+            placeholder="Talk to the character..."
           ></textarea>
           <div class="composer-actions">
             <span class="hint">Enter to send · Shift+Enter for newline</span>
@@ -75,8 +64,14 @@
 
     <template id="message-template">
       <article class="message">
-        <div class="message-meta"></div>
-        <div class="message-body"></div>
+        <div class="message-avatar" hidden>
+          <img class="message-avatar-image" alt="Character portrait" hidden />
+          <div class="message-avatar-fallback" hidden></div>
+        </div>
+        <div class="message-content">
+          <div class="message-meta"></div>
+          <div class="message-body"></div>
+        </div>
       </article>
     </template>
 

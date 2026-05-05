@@ -4,7 +4,13 @@ const state = {
   error: null,
 };
 
+const SPEAKER_AVATARS = {
+  User: "/static/ui/user-avatar.svg",
+  Narrator: "/static/ui/narrator-avatar.svg",
+};
+
 const elements = {
+  sceneStage: document.getElementById("scene-stage"),
   chatLog: document.getElementById("chat-log"),
   composer: document.getElementById("composer"),
   userInput: document.getElementById("user-input"),
@@ -12,13 +18,10 @@ const elements = {
   restartButton: document.getElementById("restart-button"),
   statusText: document.getElementById("status-text"),
   statusDot: document.getElementById("status-dot"),
-  sceneImage: document.getElementById("scene-image"),
   sceneLabel: document.getElementById("scene-label"),
   sceneLocation: document.getElementById("scene-location"),
   npcName: document.getElementById("npc-name"),
   npcRole: document.getElementById("npc-role"),
-  npcPortrait: document.getElementById("npc-portrait"),
-  npcFallback: document.getElementById("npc-fallback"),
   travelPanel: document.getElementById("travel-panel"),
   travelOptions: document.getElementById("travel-options"),
   messageTemplate: document.getElementById("message-template"),
@@ -63,7 +66,7 @@ async function sendTurn(userInput) {
     return;
   }
 
-  setBusy(true, "Waiting for NPC response…");
+  setBusy(true, "Waiting for response…");
   try {
     state.conversation = await apiRequest("POST", "/conversation/turn", {
       state: state.conversation,
@@ -79,31 +82,32 @@ async function sendTurn(userInput) {
 
 function setBusy(busy, statusText) {
   state.busy = busy;
-  elements.sendButton.disabled = busy;
   elements.restartButton.disabled = busy;
-  elements.userInput.disabled = busy;
   elements.statusText.textContent = statusText;
   elements.statusDot.classList.remove("ready", "error");
+
   if (!busy && !state.error) {
     elements.statusDot.classList.add("ready");
   }
+
+  updateComposerState();
 }
 
 function handleError(error) {
   state.busy = false;
   state.error = error instanceof Error ? error.message : String(error);
-  elements.sendButton.disabled = false;
   elements.restartButton.disabled = false;
-  elements.userInput.disabled = false;
   elements.statusText.textContent = state.error;
   elements.statusDot.classList.remove("ready");
   elements.statusDot.classList.add("error");
+  updateComposerState();
 }
 
 function render() {
   renderScene();
   renderConversation();
   renderTravelOptions();
+  updateComposerState();
 }
 
 function renderScene() {
@@ -111,31 +115,23 @@ function renderScene() {
   const scene = rendering.scene || {};
   const npc = rendering.npc || {};
   const background = scene.background || {};
-  const headshot = npc.headshot || {};
 
   elements.sceneLabel.textContent = scene.label || "Unknown Scene";
   elements.sceneLocation.textContent = scene.location || "";
-  elements.sceneImage.style.backgroundImage = background.url
-    ? `linear-gradient(180deg, rgba(15, 23, 42, 0.12), rgba(2, 6, 23, 0.92)), url('${background.url}')`
-    : "linear-gradient(160deg, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.75)), linear-gradient(180deg, rgba(15, 23, 42, 0.4), rgba(2, 6, 23, 0.95))";
-
   elements.npcName.textContent = npc.name || "Unknown NPC";
   elements.npcRole.textContent = npc.role || "";
 
-  if (headshot.url) {
-    elements.npcPortrait.src = headshot.url;
-    elements.npcPortrait.hidden = false;
-    elements.npcFallback.hidden = true;
-  } else {
-    elements.npcPortrait.hidden = true;
-    elements.npcFallback.hidden = false;
-  }
+  elements.sceneStage.style.backgroundImage = background.url
+    ? `linear-gradient(rgba(66, 48, 29, 0.42), rgba(37, 25, 13, 0.62)), url('${background.url}')`
+    : "linear-gradient(rgba(66, 48, 29, 0.42), rgba(37, 25, 13, 0.62)), linear-gradient(180deg, #7d6449 0%, #4f3b29 100%)";
 }
 
 function renderConversation() {
   const history = Array.isArray(state.conversation?.conversation_history)
     ? state.conversation.conversation_history
     : [];
+  const npcName = state.conversation?.npc_profile?.name;
+  const npcHeadshotUrl = state.conversation?.rendering?.npc?.headshot?.url || null;
 
   elements.chatLog.innerHTML = "";
 
@@ -152,11 +148,30 @@ function renderConversation() {
     const message = fragment.querySelector(".message");
     const meta = fragment.querySelector(".message-meta");
     const body = fragment.querySelector(".message-body");
+    const avatar = fragment.querySelector(".message-avatar");
+    const avatarImage = fragment.querySelector(".message-avatar-image");
+    const avatarFallback = fragment.querySelector(".message-avatar-fallback");
     const speaker = turn?.speaker || "Unknown";
+    const kind = classifySpeaker(speaker, npcName);
+    const avatarUrl = getSpeakerAvatarUrl({ speaker, kind, npcHeadshotUrl });
 
-    message.classList.add(classifySpeaker(speaker, state.conversation?.npc_profile?.name));
+    message.classList.add(kind);
     meta.textContent = speaker;
     body.textContent = turn?.dialogue || "";
+
+    if (avatarUrl) {
+      message.classList.add("has-avatar");
+      avatar.hidden = false;
+      avatarImage.src = avatarUrl;
+      avatarImage.hidden = false;
+      avatarFallback.hidden = true;
+    } else if (kind === "npc") {
+      message.classList.add("has-avatar");
+      avatar.hidden = false;
+      avatarFallback.textContent = (speaker || "?").charAt(0).toUpperCase();
+      avatarFallback.hidden = false;
+      avatarImage.hidden = true;
+    }
 
     elements.chatLog.appendChild(fragment);
   }
@@ -180,13 +195,10 @@ function renderTravelOptions() {
     const card = document.createElement("article");
     card.className = "travel-option";
 
-    const top = document.createElement("div");
-    top.className = "travel-option-top";
-
     const thumb = document.createElement("div");
     thumb.className = "travel-thumb";
     if (option?.background?.url) {
-      thumb.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(2, 6, 23, 0.82)), url('${option.background.url}')`;
+      thumb.style.backgroundImage = `linear-gradient(rgba(75, 52, 28, 0.14), rgba(39, 26, 14, 0.24)), url('${option.background.url}')`;
     }
 
     const copy = document.createElement("div");
@@ -198,22 +210,29 @@ function renderTravelOptions() {
     const description = document.createElement("p");
     description.textContent = option.description || "";
 
-    const npcInfo = document.createElement("p");
-    npcInfo.textContent = option?.npc?.name ? `Meet ${option.npc.name}` : "";
-
-    copy.append(title, description, npcInfo);
-    top.append(thumb, copy);
-
     const button = document.createElement("button");
     button.type = "button";
     button.className = "travel-command";
-    button.textContent = option.command || "Choose";
+    button.textContent = "Travel here";
     button.disabled = state.busy;
     button.addEventListener("click", () => sendTurn(option.command || ""));
 
-    card.append(top, button);
+    copy.append(title, description);
+    card.append(thumb, copy, button);
     elements.travelOptions.appendChild(card);
   }
+}
+
+function updateComposerState() {
+  const travelSelection = Boolean(state.conversation?.rendering?.travel_selection);
+  const disabled = state.busy || travelSelection;
+
+  elements.composer.hidden = travelSelection;
+  elements.userInput.disabled = disabled;
+  elements.sendButton.disabled = disabled;
+  elements.userInput.placeholder = travelSelection
+    ? "Choose a destination below to continue."
+    : "Talk to the character...";
 }
 
 function classifySpeaker(speaker, npcName) {
@@ -222,6 +241,14 @@ function classifySpeaker(speaker, npcName) {
   if (speaker === "System") return "system";
   if (speaker === npcName) return "npc";
   return "npc";
+}
+
+function getSpeakerAvatarUrl({ speaker, kind, npcHeadshotUrl }) {
+  if (kind === "npc") {
+    return npcHeadshotUrl || null;
+  }
+
+  return SPEAKER_AVATARS[speaker] || null;
 }
 
 elements.composer.addEventListener("submit", async (event) => {
@@ -233,7 +260,9 @@ elements.composer.addEventListener("submit", async (event) => {
 
   elements.userInput.value = "";
   await sendTurn(value);
-  elements.userInput.focus();
+  if (!elements.composer.hidden) {
+    elements.userInput.focus();
+  }
 });
 
 elements.userInput.addEventListener("keydown", (event) => {
