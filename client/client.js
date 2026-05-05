@@ -95,7 +95,7 @@ async function sendUserTurn(state, userInput) {
 
 async function main() {
   console.log("TripWright NPC CLI");
-  console.log("Commands: /restart  /history  /quit\n");
+  console.log("Commands: /restart  /history  /quit  /command <1|2|3>\n");
 
   let conversationState = await initializeConversation();
   printNewTurns(conversationState, 0);
@@ -139,7 +139,11 @@ async function main() {
       : 0;
 
     conversationState = await sendUserTurn(conversationState, input);
-    printNewTurns(conversationState, previousLength, { includeUser: false });
+    const nextHistoryLength = Array.isArray(conversationState?.conversation_history)
+      ? conversationState.conversation_history.length
+      : 0;
+    const printOffset = nextHistoryLength < previousLength ? 0 : previousLength;
+    printNewTurns(conversationState, printOffset, { includeUser: false });
     rl.prompt();
   });
 

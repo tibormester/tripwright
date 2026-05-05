@@ -6,21 +6,13 @@ from flask import Flask, jsonify, request
 
 from npc_agent.agent import initialize_conversation, run_turn, start_conversation
 from npc_agent.conversation_state import ConversationState, DialogueTurn
-from npc_agent.npc_profile import NPCProfile
+from npc_agent.scenes import get_initial_scene
 
 app = Flask(__name__)
 
 if not app.logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 app.logger.setLevel(logging.INFO)
-
-DEFAULT_LOCATION = "the lobby of a grand city hotel"
-DEFAULT_SCENE_INTRO = (
-    "After a sleepless red-eye, you step into the hotel lobby with your carry-on still in hand. "
-    "The room is all warm light, polished stone, and low conversation, and the front desk ahead of you "
-    "feels like the first real pause since you left the airport. Behind it stands Love Patel, alert and "
-    "welcoming, already looking up as you arrive."
-)
 
 
 def _find_last_turn(turns: list[DialogueTurn], *, speaker: str) -> DialogueTurn | None:
@@ -39,6 +31,7 @@ def _extract_new_flags(
         for key, value in current_hidden_metadata.items()
         if previous_hidden_metadata.get(key) != value
     }
+
 
 def _format_inline(value: str | None) -> str:
     if not value:
@@ -76,6 +69,7 @@ def _log_conversation_state(
             f"user: {_format_inline(user_turn.dialogue if user_turn else None)}",
             f"npc dialogue: {_format_inline(npc_turn.dialogue if npc_turn else None)}",
             f"npc thinking: {_format_inline(npc_turn.thinking if npc_turn else None)}",
+            f"location: {_format_inline(state.location)}",
             "flags:",
             _format_flags(new_flags),
             "remaining overt goals:",
@@ -95,12 +89,13 @@ def health() -> tuple[dict[str, str], int]:
 @app.post("/conversation/initialize")
 def conversation_initialize():
     data = request.get_json(silent=True) or {}
-    location = str(data.get("location") or DEFAULT_LOCATION)
-    narrator_text = str(data.get("narrator_text") or DEFAULT_SCENE_INTRO)
+    initial_scene = get_initial_scene()
+    location = str(data.get("location") or initial_scene.location)
+    narrator_text = str(data.get("narrator_text") or initial_scene.narrator_text)
 
     try:
         state = initialize_conversation(
-            npc_profile=NPCProfile.love_patel(),
+            npc_profile=initial_scene.npc_factory(),
             location=location,
             narrator_text=narrator_text,
         )

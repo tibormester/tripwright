@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from .prompts import bookstore_clerk as bookstore_clerk_prompt
+from .prompts import kat_barista as kat_barista_prompt
+from .prompts import love_patel as love_patel_prompt
+from .prompts import riverside_guide as riverside_guide_prompt
+
 
 @dataclass
 class NPCProfile:
@@ -22,20 +27,19 @@ class NPCProfile:
 
     @staticmethod
     def love_patel() -> "NPCProfile":
-        """Build the default hotel receptionist NPC used by the prototype."""
-        return NPCProfile(
-            name=NAME,
-            background=BACKGROUND,
-            role=ROLE,
-            speaking_style=SPEAKING_STYLE,
-            physical_description=PHYSICAL_DESCRIPTION,
-            mental_description=MENTAL_DESCRIPTION,
-            emotional_description=EMOTIONAL_DESCRIPTION,
-            local_flavor=LOCAL_FLAVOR,
-            beliefs=BELIEFS,
-            overt_goals=dict(OVERT_GOALS),
-            subtle_goals=dict(SUBTLE_GOALS),
-        )
+        return _profile_from_prompt_module(love_patel_prompt)
+
+    @staticmethod
+    def kat_barista() -> "NPCProfile":
+        return _profile_from_prompt_module(kat_barista_prompt)
+
+    @staticmethod
+    def rae_riverside_guide() -> "NPCProfile":
+        return _profile_from_prompt_module(riverside_guide_prompt)
+
+    @staticmethod
+    def eli_bookstore_clerk() -> "NPCProfile":
+        return _profile_from_prompt_module(bookstore_clerk_prompt)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the NPC profile into a JSON-compatible dictionary."""
@@ -71,26 +75,36 @@ class NPCProfile:
         )
 
 
-from .prompts.love_patel import (
-    BACKGROUND,
-    BELIEFS,
-    EMOTIONAL_DESCRIPTION,
-    LOCAL_FLAVOR,
-    MENTAL_DESCRIPTION,
-    NAME,
-    OVERT_GOALS,
-    PHYSICAL_DESCRIPTION,
-    ROLE,
-    SPEAKING_STYLE,
-    SUBTLE_GOALS,
-)
-
-
 class StaticNPCProfileFactory:
     """Creates predefined NPC profiles for early prototyping and testing."""
 
     def create_hotel_receptionist(self) -> NPCProfile:
         return NPCProfile.love_patel()
+
+    def create_coffee_shop_barista(self) -> NPCProfile:
+        return NPCProfile.kat_barista()
+
+    def create_riverside_guide(self) -> NPCProfile:
+        return NPCProfile.rae_riverside_guide()
+
+    def create_bookstore_clerk(self) -> NPCProfile:
+        return NPCProfile.eli_bookstore_clerk()
+
+
+def _profile_from_prompt_module(prompt_module: Any) -> NPCProfile:
+    return NPCProfile(
+        name=str(prompt_module.NAME),
+        background=str(prompt_module.BACKGROUND),
+        role=str(prompt_module.ROLE),
+        speaking_style=str(prompt_module.SPEAKING_STYLE),
+        physical_description=str(prompt_module.PHYSICAL_DESCRIPTION),
+        mental_description=str(prompt_module.MENTAL_DESCRIPTION),
+        emotional_description=str(prompt_module.EMOTIONAL_DESCRIPTION),
+        local_flavor=str(prompt_module.LOCAL_FLAVOR),
+        beliefs=str(prompt_module.BELIEFS),
+        overt_goals=dict(prompt_module.OVERT_GOALS),
+        subtle_goals=dict(prompt_module.SUBTLE_GOALS),
+    )
 
 
 def _normalize_goals(raw_goals: Any) -> dict[str, str]:

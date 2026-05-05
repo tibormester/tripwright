@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .constants import EXIT_CONVERSATION_TAG
 from .conversation_state import ConversationState
 from .npc_profile import NPCProfile
 from .prompts.npc_prompts import *
@@ -56,6 +57,7 @@ def _build_runtime_context(state: ConversationState) -> str:
 
     Important rule: tags are one-time machine signals. Do not repeat old tags just because they already exist in hidden metadata.
     Only emit a tag if it is newly earned or newly discovered in this turn.
+    Use the narrator setup and earlier conversation as your best clues about the player's state, energy, and what kind of subtle social beat would feel natural.
 
     Conversation so far
     {history}
@@ -76,6 +78,8 @@ def _build_suffix(profile: NPCProfile) -> str:
     Goal completion rule
     - If you complete a goal this turn, emit exactly one tag whose name exactly matches that goal name.
     - Example: if the completed goal name is build_rapport, emit <build_rapport></build_rapport>
+    - If the conversation has reached a natural stopping point, you may also emit <{EXIT_CONVERSATION_TAG}>brief hidden reason</{EXIT_CONVERSATION_TAG}>.
+    - {EXIT_CONVERSATION_TAG} is always a valid option when the player has what they need, the exchange is stalling, or a short goodbye would feel more human than stretching the scene.
 
     Metadata rule
     - If you want to store hidden metadata, emit a tag with the value between the opening and closing tags.
@@ -95,7 +99,20 @@ def _build_suffix(profile: NPCProfile) -> str:
 def _format_goals(goals: dict[str, str]) -> str:
     if not goals:
         return "- none"
-    return "\n".join(f"- {goal_name}: {description}" for goal_name, description in goals.items())
+
+    blocks: list[str] = []
+    for goal_name, description in goals.items():
+        cleaned_description = description.strip()
+        if "\n" not in cleaned_description:
+            blocks.append(f"- {goal_name}: {cleaned_description}")
+            continue
+
+        indented_description = "\n".join(
+            f"  {line}" if line else "" for line in cleaned_description.splitlines()
+        )
+        blocks.append(f"- {goal_name}:\n{indented_description}")
+
+    return "\n".join(blocks)
 
 
 def _format_metadata(metadata: dict[str, str]) -> str:
