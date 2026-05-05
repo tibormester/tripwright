@@ -9,6 +9,9 @@
   <body>
     <div class="scene-stage" id="scene-stage">
       <div class="scene-tint"></div>
+      <div class="scene-fade-overlay" id="scene-fade-overlay">
+        <div class="scene-fade-loading" id="scene-fade-loading">...</div>
+      </div>
 
       <main class="game-shell">
         <header class="scene-banner parchment-panel">
@@ -49,14 +52,16 @@
         </section>
 
         <form class="composer parchment-panel" id="composer">
-          <textarea
-            id="user-input"
-            rows="3"
-            placeholder="Talk to the character..."
-          ></textarea>
+          <div class="composer-row">
+            <textarea
+              id="user-input"
+              rows="3"
+              placeholder="Talk to the character..."
+            ></textarea>
+            <button id="send-button" type="submit">Send</button>
+          </div>
           <div class="composer-actions">
             <span class="hint">Enter to send · Shift+Enter for newline</span>
-            <button id="send-button" type="submit">Send</button>
           </div>
         </form>
       </main>

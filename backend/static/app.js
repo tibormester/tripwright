@@ -2,12 +2,21 @@ const state = {
   conversation: null,
   busy: false,
   error: null,
+  pendingUserTurn: null,
+  loadingTimer: null,
+  loadingFrameIndex: 0,
+  lastSceneBackgroundUrl: null,
+  sceneTransitionTimer: null,
+  travelTransitioning: false,
 };
 
 const SPEAKER_AVATARS = {
   User: "/static/ui/user-avatar.svg",
   Narrator: "/static/ui/narrator-avatar.svg",
 };
+
+const LOADING_FRAMES = ["...", "..", ".", ".."];
+const SCENE_COMPLETE_PREFIX = "Scene complete. Choose where to go next";
 
 const elements = {
   sceneStage: document.getElementById("scene-stage"),
@@ -25,6 +34,7 @@ const elements = {
   travelPanel: document.getElementById("travel-panel"),
   travelOptions: document.getElementById("travel-options"),
   messageTemplate: document.getElementById("message-template"),
+  sceneFadeOverlay: document.getElementById("scene-fade-overlay"),
 };
 
 async function apiRequest(method, path, body) {
@@ -50,33 +60,76 @@ async function apiRequest(method, path, body) {
 }
 
 async function initializeConversation() {
+  stopLoadingIndicator();
+  state.pendingUserTurn = null;
+  state.travelTransitioning = false;
+  hideSceneFadeOverlay();
   setBusy(true, "Starting conversation…");
+
   try {
     state.conversation = await apiRequest("POST", "/conversation/initialize", {});
     state.error = null;
-    render();
     setBusy(false, "Connected");
+    render();
   } catch (error) {
     handleError(error);
   }
 }
 
-async function sendTurn(userInput) {
-  if (!state.conversation || !userInput.trim()) {
+async function sendTurn(userInput, options = {}) {
+  const cleanedInput = userInput.trim();
+  if (!state.conversation || !cleanedInput) {
     return;
   }
 
+  const { silent = false, useSceneFade = false } = options;
+
+  state.pendingUserTurn = silent ? null : cleanedInput;
+  state.travelTransitioning = useSceneFade;
+
+  if (!silent) {
+    startLoadingIndicator();
+  }
+
+  if (useSceneFade) {
+    showSceneFadeOverlay();
+  }
+
   setBusy(true, "Waiting for response…");
+  render();
+
   try {
+    const previousHistoryLength = Array.isArray(state.conversation?.conversation_history)
+      ? state.conversation.conversation_history.length
+      : 0;
+
     state.conversation = await apiRequest("POST", "/conversation/turn", {
       state: state.conversation,
-      user_input: userInput,
+      user_input: cleanedInput,
     });
     state.error = null;
-    render();
+    markIncomingTurns(previousHistoryLength);
+    state.pendingUserTurn = null;
+    stopLoadingIndicator();
     setBusy(false, "Connected");
+    render();
+
+    if (useSceneFade) {
+      window.setTimeout(() => {
+        hideSceneFadeOverlay();
+        state.travelTransitioning = false;
+        updateComposerState();
+      }, 140);
+    } else {
+      state.travelTransitioning = false;
+    }
   } catch (error) {
+    state.pendingUserTurn = null;
+    stopLoadingIndicator();
+    state.travelTransitioning = false;
+    hideSceneFadeOverlay();
     handleError(error);
+    render();
   }
 }
 
@@ -115,21 +168,25 @@ function renderScene() {
   const scene = rendering.scene || {};
   const npc = rendering.npc || {};
   const background = scene.background || {};
+  const backgroundUrl = background.url || null;
 
   elements.sceneLabel.textContent = scene.label || "Unknown Scene";
   elements.sceneLocation.textContent = scene.location || "";
   elements.npcName.textContent = npc.name || "Unknown NPC";
   elements.npcRole.textContent = npc.role || "";
 
-  elements.sceneStage.style.backgroundImage = background.url
-    ? `linear-gradient(rgba(66, 48, 29, 0.42), rgba(37, 25, 13, 0.62)), url('${background.url}')`
+  if (state.lastSceneBackgroundUrl !== null && state.lastSceneBackgroundUrl !== backgroundUrl) {
+    triggerSceneTransition();
+  }
+  state.lastSceneBackgroundUrl = backgroundUrl;
+
+  elements.sceneStage.style.backgroundImage = backgroundUrl
+    ? `linear-gradient(rgba(66, 48, 29, 0.42), rgba(37, 25, 13, 0.62)), url('${backgroundUrl}')`
     : "linear-gradient(rgba(66, 48, 29, 0.42), rgba(37, 25, 13, 0.62)), linear-gradient(180deg, #7d6449 0%, #4f3b29 100%)";
 }
 
 function renderConversation() {
-  const history = Array.isArray(state.conversation?.conversation_history)
-    ? state.conversation.conversation_history
-    : [];
+  const history = getDisplayHistory();
   const npcName = state.conversation?.npc_profile?.name;
   const npcHeadshotUrl = state.conversation?.rendering?.npc?.headshot?.url || null;
 
@@ -159,6 +216,14 @@ function renderConversation() {
     meta.textContent = speaker;
     body.textContent = turn?.dialogue || "";
 
+    if (turn?.pending) {
+      message.classList.add("pending");
+    }
+
+    if (turn?.incoming) {
+      message.classList.add("incoming");
+    }
+
     if (avatarUrl) {
       message.classList.add("has-avatar");
       avatar.hidden = false;
@@ -176,7 +241,7 @@ function renderConversation() {
     elements.chatLog.appendChild(fragment);
   }
 
-  elements.chatLog.scrollTop = elements.chatLog.scrollHeight;
+  smoothScrollChatToBottom();
 }
 
 function renderTravelOptions() {
@@ -191,9 +256,10 @@ function renderTravelOptions() {
     return;
   }
 
-  for (const option of options) {
+  for (const [index, option] of options.entries()) {
     const card = document.createElement("article");
-    card.className = "travel-option";
+    card.className = "travel-option travel-option-enter";
+    card.style.animationDelay = `${index * 90}ms`;
 
     const thumb = document.createElement("div");
     thumb.className = "travel-thumb";
@@ -215,7 +281,7 @@ function renderTravelOptions() {
     button.className = "travel-command";
     button.textContent = "Travel here";
     button.disabled = state.busy;
-    button.addEventListener("click", () => sendTurn(option.command || ""));
+    button.addEventListener("click", () => sendTurn(option.command || "", { silent: true, useSceneFade: true }));
 
     copy.append(title, description);
     card.append(thumb, copy, button);
@@ -225,14 +291,61 @@ function renderTravelOptions() {
 
 function updateComposerState() {
   const travelSelection = Boolean(state.conversation?.rendering?.travel_selection);
-  const disabled = state.busy || travelSelection;
+  const hidden = travelSelection || state.travelTransitioning;
+  const disabled = state.busy || travelSelection || state.travelTransitioning;
 
-  elements.composer.hidden = travelSelection;
+  elements.composer.hidden = hidden;
   elements.userInput.disabled = disabled;
   elements.sendButton.disabled = disabled;
   elements.userInput.placeholder = travelSelection
     ? "Choose a destination below to continue."
     : "Talk to the character...";
+}
+
+function getDisplayHistory() {
+  const rawHistory = Array.isArray(state.conversation?.conversation_history)
+    ? state.conversation.conversation_history
+    : [];
+  const history = rawHistory.filter((turn) => !shouldHideTurn(turn));
+  const npcName = state.conversation?.npc_profile?.name || "NPC";
+
+  if (state.pendingUserTurn) {
+    history.push({ speaker: "User", dialogue: state.pendingUserTurn, pending: true });
+    history.push({ speaker: npcName, dialogue: LOADING_FRAMES[state.loadingFrameIndex], pending: true });
+  }
+
+  return history;
+}
+
+function shouldHideTurn(turn) {
+  return turn?.speaker === "System"
+    && typeof turn?.dialogue === "string"
+    && turn.dialogue.startsWith(SCENE_COMPLETE_PREFIX);
+}
+
+function markIncomingTurns(previousHistoryLength) {
+  const history = Array.isArray(state.conversation?.conversation_history)
+    ? state.conversation.conversation_history
+    : [];
+
+  for (let index = 0; index < history.length; index += 1) {
+    const turn = history[index];
+    if (!turn || typeof turn !== "object") {
+      continue;
+    }
+
+    if (index >= previousHistoryLength && !shouldHideTurn(turn) && turn.speaker !== "User") {
+      turn.incoming = true;
+      window.setTimeout(() => {
+        if (turn && turn.incoming) {
+          delete turn.incoming;
+          renderConversation();
+        }
+      }, 900);
+    } else {
+      delete turn.incoming;
+    }
+  }
 }
 
 function classifySpeaker(speaker, npcName) {
@@ -249,6 +362,53 @@ function getSpeakerAvatarUrl({ speaker, kind, npcHeadshotUrl }) {
   }
 
   return SPEAKER_AVATARS[speaker] || null;
+}
+
+function smoothScrollChatToBottom() {
+  elements.chatLog.scrollTo({
+    top: elements.chatLog.scrollHeight,
+    behavior: "smooth",
+  });
+}
+
+function triggerSceneTransition() {
+  elements.sceneStage.classList.remove("scene-transition");
+  void elements.sceneStage.offsetWidth;
+  elements.sceneStage.classList.add("scene-transition");
+
+  if (state.sceneTransitionTimer !== null) {
+    window.clearTimeout(state.sceneTransitionTimer);
+  }
+
+  state.sceneTransitionTimer = window.setTimeout(() => {
+    elements.sceneStage.classList.remove("scene-transition");
+    state.sceneTransitionTimer = null;
+  }, 520);
+}
+
+function showSceneFadeOverlay() {
+  elements.sceneFadeOverlay.classList.add("active");
+}
+
+function hideSceneFadeOverlay() {
+  elements.sceneFadeOverlay.classList.remove("active");
+}
+
+function startLoadingIndicator() {
+  stopLoadingIndicator();
+  state.loadingFrameIndex = 0;
+  state.loadingTimer = window.setInterval(() => {
+    state.loadingFrameIndex = (state.loadingFrameIndex + 1) % LOADING_FRAMES.length;
+    renderConversation();
+  }, 350);
+}
+
+function stopLoadingIndicator() {
+  if (state.loadingTimer !== null) {
+    window.clearInterval(state.loadingTimer);
+    state.loadingTimer = null;
+  }
+  state.loadingFrameIndex = 0;
 }
 
 elements.composer.addEventListener("submit", async (event) => {

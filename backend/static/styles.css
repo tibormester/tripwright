@@ -55,6 +55,10 @@ p {
   background-position: center;
 }
 
+.scene-stage.scene-transition {
+  animation: scene-swap 520ms ease;
+}
+
 .scene-tint {
   position: absolute;
   inset: 0;
@@ -64,9 +68,40 @@ p {
   pointer-events: none;
 }
 
+.scene-fade-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+}
+
+.scene-fade-overlay.active {
+  opacity: 1;
+}
+
+.scene-fade-loading {
+  color: rgba(255, 246, 228, 0.92);
+  font-size: 2.2rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 180ms ease;
+}
+
+.scene-fade-overlay.active .scene-fade-loading {
+  opacity: 1;
+  animation: fade-loading-pulse 1s ease-in-out infinite;
+}
+
 .game-shell {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   min-height: 100vh;
   max-width: 980px;
   margin: 0 auto;
@@ -199,6 +234,8 @@ p {
   background: linear-gradient(180deg, #d4b074, #ba8e4b);
   color: #24170c;
   font-weight: 700;
+  min-width: 96px;
+  align-self: stretch;
 }
 
 .secondary-button:hover,
@@ -226,6 +263,7 @@ p {
   gap: 18px;
   scrollbar-width: thin;
   scrollbar-color: rgba(231, 207, 170, 0.65) rgba(47, 36, 25, 0.25);
+  scroll-behavior: smooth;
 }
 
 .chat-log::-webkit-scrollbar {
@@ -296,6 +334,27 @@ p {
   background: var(--user);
 }
 
+.message.pending .message-body {
+  opacity: 0.92;
+}
+
+.message.pending.npc .message-avatar {
+  animation: portrait-pulse 1.3s ease-in-out infinite;
+}
+
+.message.pending .message-body {
+  animation: loading-breath 1.1s ease-in-out infinite;
+}
+
+.message.incoming {
+  animation: message-fade-in 320ms ease-out;
+}
+
+.message.incoming .message-body,
+.message.incoming .message-avatar {
+  animation: message-fade-in 380ms ease-out;
+}
+
 .message.narrator .message-body {
   background: var(--narrator);
   font-style: italic;
@@ -358,6 +417,10 @@ p {
   background: rgba(255, 248, 232, 0.54);
 }
 
+.travel-option-enter {
+  animation: travel-card-in 420ms ease-out both;
+}
+
 .travel-thumb {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -382,10 +445,22 @@ p {
 .composer {
   padding: 14px 18px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   background:
     linear-gradient(180deg, rgba(255, 249, 233, 0.12), rgba(255, 244, 215, 0.06)),
     rgba(241, 227, 193, 0.32);
+}
+
+.composer[hidden],
+.travel-panel[hidden] {
+  display: none !important;
+}
+
+.composer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 12px;
 }
 
 #user-input {
@@ -410,7 +485,7 @@ p {
 
 .composer-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 12px;
 }
@@ -418,9 +493,16 @@ p {
 button:disabled,
 textarea:disabled {
   opacity: 0.55;
-  cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+textarea:disabled {
+  cursor: default;
 }
 
 .empty-state {
@@ -453,6 +535,79 @@ textarea:disabled {
   }
 }
 
+@keyframes fade-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.98);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes scene-swap {
+  0% {
+    opacity: 0.88;
+    filter: brightness(0.92) saturate(0.92);
+  }
+
+  100% {
+    opacity: 1;
+    filter: brightness(1) saturate(1);
+  }
+}
+
+@keyframes portrait-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 22px rgba(18, 11, 7, 0.26);
+  }
+
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 12px 28px rgba(18, 11, 7, 0.36);
+  }
+}
+
+@keyframes loading-breath {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes message-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes travel-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 640px) {
   .chat-log,
   .travel-panel,
@@ -466,6 +621,10 @@ textarea:disabled {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .composer-row {
+    grid-template-columns: 1fr;
   }
 
   .composer-actions {
