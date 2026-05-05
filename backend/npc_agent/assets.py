@@ -229,7 +229,7 @@ def _describe_runtime_asset(spec: ImageAssetSpec) -> dict[str, Any]:
     return {
         "key": spec.key,
         "exists": exists,
-        "url": spec.url_path if exists else None,
+        "url": spec.url_path,
         "relative_path": spec.relative_path,
     }
 
@@ -241,7 +241,7 @@ def _describe_asset(spec: ImageAssetSpec) -> dict[str, Any]:
         "key": spec.key,
         "label": spec.label,
         "exists": exists,
-        "url": spec.url_path if exists else None,
+        "url": spec.url_path,
         "relative_path": spec.relative_path,
         "metadata_relative_path": spec.metadata_relative_path,
         "source": spec.source,
