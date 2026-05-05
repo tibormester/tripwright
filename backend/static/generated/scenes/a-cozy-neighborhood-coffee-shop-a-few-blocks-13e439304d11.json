@@ -1,0 +1,14 @@
+{
+  "kind": "scene_background",
+  "key": "a-cozy-neighborhood-coffee-shop-a-few-blocks-13e439304d11",
+  "label": "Corner Coffee",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-05T05:23:44.077774+00:00",
+  "relative_path": "generated/scenes/a-cozy-neighborhood-coffee-shop-a-few-blocks-13e439304d11.png",
+  "prompt": "Create a scene background image for a browser-based narrative RPG. Style: cinematic semi-realistic digital illustration for a narrative travel adventure game, rich environmental storytelling, polished concept-art quality, grounded lighting, no text, no UI. Focus on the environment and mood rather than a character portrait. If people appear, they should be small and incidental in the composition. Location: a cozy neighborhood coffee shop a few blocks from the hotel. Narration: A short walk from the hotel, the street opens onto a compact coffee shop with fogged windows, a handwritten specials board, and the smell of espresso drifting out every time the door swings open. Inside, cups clink, the grinder growls, and behind the counter stands Kat, a barista with a lively half-smile and the kind of energy that makes the room feel a little less tired..",
+  "source": {
+    "location": "a cozy neighborhood coffee shop a few blocks from the hotel",
+    "narrator_text": "A short walk from the hotel, the street opens onto a compact coffee shop with fogged windows, a handwritten specials board, and the smell of espresso drifting out every time the door swings open. Inside, cups clink, the grinder growls, and behind the counter stands Kat, a barista with a lively half-smile and the kind of energy that makes the room feel a little less tired."
+  }
+}

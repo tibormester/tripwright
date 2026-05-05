@@ -1,0 +1,14 @@
+{
+  "kind": "scene_background",
+  "key": "the-lobby-of-a-grand-city-hotel-706e3f503ce9",
+  "label": "Hotel Lobby",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-05T05:24:36.985987+00:00",
+  "relative_path": "generated/scenes/the-lobby-of-a-grand-city-hotel-706e3f503ce9.png",
+  "prompt": "Create a scene background image for a browser-based narrative RPG. Style: cinematic semi-realistic digital illustration for a narrative travel adventure game, rich environmental storytelling, polished concept-art quality, grounded lighting, no text, no UI. Focus on the environment and mood rather than a character portrait. If people appear, they should be small and incidental in the composition. Location: the lobby of a grand city hotel. Narration: After a sleepless red-eye, you step into the hotel lobby with your carry-on still in hand. The room is all warm light, polished stone, and low conversation, and the front desk ahead of you feels like the first real pause since you left the airport. Behind it stands Love Patel, alert and welcoming, already looking up as you arrive..",
+  "source": {
+    "location": "the lobby of a grand city hotel",
+    "narrator_text": "After a sleepless red-eye, you step into the hotel lobby with your carry-on still in hand. The room is all warm light, polished stone, and low conversation, and the front desk ahead of you feels like the first real pause since you left the airport. Behind it stands Love Patel, alert and welcoming, already looking up as you arrive."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "kind": "scene_background",
+  "key": "the-riverside-promenade-a-short-walk-from-downtown-004df1339778",
+  "label": "Riverside Walk",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-05T05:25:19.228921+00:00",
+  "relative_path": "generated/scenes/the-riverside-promenade-a-short-walk-from-downtown-004df1339778.png",
+  "prompt": "Create a scene background image for a browser-based narrative RPG. Style: cinematic semi-realistic digital illustration for a narrative travel adventure game, rich environmental storytelling, polished concept-art quality, grounded lighting, no text, no UI. Focus on the environment and mood rather than a character portrait. If people appear, they should be small and incidental in the composition. Location: the riverside promenade a short walk from downtown. Narration: The city opens up as the streets slope toward the river, where the air feels cooler and the sound of traffic thins into gulls, water, and distant conversation. Near the promenade entrance, a small kiosk sits beside a rack of maps and paper cups of ice water. Rae Moreno looks up from the counter with the unhurried ease of someone who knows this stretch of river by heart..",
+  "source": {
+    "location": "the riverside promenade a short walk from downtown",
+    "narrator_text": "The city opens up as the streets slope toward the river, where the air feels cooler and the sound of traffic thins into gulls, water, and distant conversation. Near the promenade entrance, a small kiosk sits beside a rack of maps and paper cups of ice water. Rae Moreno looks up from the counter with the unhurried ease of someone who knows this stretch of river by heart."
+  }
+}

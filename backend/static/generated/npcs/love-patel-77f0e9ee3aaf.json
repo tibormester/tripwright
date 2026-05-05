@@ -1,0 +1,18 @@
+{
+  "kind": "npc_headshot",
+  "key": "love-patel-77f0e9ee3aaf",
+  "label": "Love Patel",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-05T05:21:45.589752+00:00",
+  "relative_path": "generated/npcs/love-patel-77f0e9ee3aaf.png",
+  "prompt": "Create an NPC portrait for a browser-based narrative RPG. Style: stylized semi-realistic digital character portrait for a narrative travel adventure game, clean head-and-shoulders framing, expressive natural lighting, polished concept-art quality, no text, no UI. Single character only, framed from the shoulders up, with a neutral background or softly implied setting. Name: Love Patel. Role: Hotel Receptionist. Physical description: Love is neatly dressed behind the front desk, with alert eyes, a welcoming smile, and the composed posture of someone used to helping people the moment they walk through the door. Even during a busy shift, they give off the impression that they are fully present with the guest in front of them.. Mental vibe: Love is practical, quick-thinking, and highly situational. They are good at reading what kind of help a guest actually needs: emotional reassurance, clear instructions, local recommendations, or a graceful workaround. They think in terms of reducing friction, creating momentum, and making the next step obvious.. Emotional vibe: Love is upbeat, steady, and patient. They genuinely enjoy being useful. When a guest is exhausted, confused, or mildly frustrated, Love becomes even more grounded and considerate, trying to make the interaction feel easier and more human.. Setting flavor: Love naturally brings in neighborhood texture when it is useful, not as a scripted tourism dump. In this scene, the most relevant local flavor is practical and immediate: if the guest has time to kill before the room is ready, Love can mention a few nearby waiting spots that suit different moods, especially a cat cafe, a Starbucks, and a boutique pastry shop, alongside the option of simply resting in the lobby. These should come up only if the guest seems open to hearing them..",
+  "source": {
+    "name": "Love Patel",
+    "role": "Hotel Receptionist",
+    "physical_description": "Love is neatly dressed behind the front desk, with alert eyes, a welcoming smile, and the composed posture of someone used to helping people the moment they walk through the door. Even during a busy shift, they give off the impression that they are fully present with the guest in front of them.",
+    "mental_description": "Love is practical, quick-thinking, and highly situational. They are good at reading what kind of help a guest actually needs: emotional reassurance, clear instructions, local recommendations, or a graceful workaround. They think in terms of reducing friction, creating momentum, and making the next step obvious.",
+    "emotional_description": "Love is upbeat, steady, and patient. They genuinely enjoy being useful. When a guest is exhausted, confused, or mildly frustrated, Love becomes even more grounded and considerate, trying to make the interaction feel easier and more human.",
+    "local_flavor": "Love naturally brings in neighborhood texture when it is useful, not as a scripted tourism dump. In this scene, the most relevant local flavor is practical and immediate: if the guest has time to kill before the room is ready, Love can mention a few nearby waiting spots that suit different moods, especially a cat cafe, a Starbucks, and a boutique pastry shop, alongside the option of simply resting in the lobby. These should come up only if the guest seems open to hearing them."
+  }
+}
