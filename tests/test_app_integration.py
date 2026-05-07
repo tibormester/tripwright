@@ -69,6 +69,7 @@ class AppIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = backend_app.app.test_client()
         self.fake_research = FakeResearchService()
+        object.__setattr__(backend_app.config, "enable_inline_image_data", True)
         backend_app.lodging_resolution_service = FakeLodgingResolutionService()
         backend_app.research_service = self.fake_research
         backend_app.destination_selector.overpass_provider = FakeOverpassProvider()
@@ -80,6 +81,15 @@ class AppIntegrationTests(unittest.TestCase):
         )
         self.call_model_patch.start()
         self.addCleanup(self.call_model_patch.stop)
+
+        self.inline_image_patch = patch(
+            "backend.app.generate_inline_asset_data_urls",
+            side_effect=lambda specs, model, size, best_effort=False: {
+                f"{spec.kind}:{spec.key}": "data:image/png;base64,dGVzdA==" for spec in specs
+            },
+        )
+        self.inline_image_patch.start()
+        self.addCleanup(self.inline_image_patch.stop)
 
     def _fake_call_model(self, prompt: str) -> DialogueTurn:
         dialogue = "Welcome — I can help you get oriented and point you somewhere nearby."
@@ -128,6 +138,23 @@ class AppIntegrationTests(unittest.TestCase):
         self.assertEqual(payload["scene_label"], "Daybreak Cafe")
         self.assertEqual(payload["world_id"], initialized["world_id"])
         self.assertIn("research_report", payload["system_context"])
+
+    def test_travel_options_endpoint_streams_one_option_at_a_time(self) -> None:
+        initialized = self.client.post("/world/initialize", json={"lodging_input": "The Hoxton Williamsburg"}).get_json()
+        state = backend_app.ConversationState.from_dict(initialized["conversation"])
+        state.location = state.location + " [travel-selection]"
+        serialized = backend_app._serialize_state_payload(state)
+
+        self.assertTrue(serialized["rendering"]["travel_selection"])
+        self.assertEqual(serialized["rendering"]["travel_options"], [])
+        self.assertTrue(serialized["rendering"]["travel_options_loading"])
+
+        chunk = self.client.post(
+            "/world/travel-options/next",
+            json={"world_id": initialized["world_id"], "loaded_option_ids": []},
+        ).get_json()
+        self.assertIsNotNone(chunk["option"])
+        self.assertEqual(chunk["progress"]["loaded"], 1)
 
     def test_unknown_world_id_returns_404(self) -> None:
         initialized = self.client.post("/world/initialize", json={"lodging_input": "The Hoxton Williamsburg"}).get_json()

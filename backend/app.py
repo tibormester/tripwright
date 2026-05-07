@@ -16,11 +16,16 @@ try:
     from backend.location import DestinationSelector, LodgingResolutionService
     from backend.location.providers import OverpassProvider
     from backend.npc_agent.agent import initialize_conversation, run_turn, start_conversation
-    from backend.npc_agent.assets import build_rendering_context, build_static_asset_manifest
+    from backend.npc_agent.assets import (
+        build_rendering_context,
+        build_runtime_travel_option_rendering,
+        build_scene_asset_spec,
+        build_static_asset_manifest,
+    )
     from backend.npc_agent.conversation_state import ConversationState, DialogueTurn
     from backend.npc_agent.scenes import build_travel_options, get_initial_scene
     from backend.research import ResearchService
-    from backend.world_builder import WorldBuilder
+    from backend.world_builder import WorldBuilder, build_system_context
     from backend.world_store import build_canonical_lodging_fingerprint, create_world_store
 except ModuleNotFoundError:
     from config import AppConfig
@@ -28,11 +33,11 @@ except ModuleNotFoundError:
     from location import DestinationSelector, LodgingResolutionService
     from location.providers import OverpassProvider
     from npc_agent.agent import initialize_conversation, run_turn, start_conversation
-    from npc_agent.assets import build_rendering_context, build_static_asset_manifest
+    from npc_agent.assets import build_rendering_context, build_runtime_travel_option_rendering, build_scene_asset_spec, build_static_asset_manifest
     from npc_agent.conversation_state import ConversationState, DialogueTurn
     from npc_agent.scenes import build_travel_options, get_initial_scene
     from research import ResearchService
-    from world_builder import WorldBuilder
+    from world_builder import WorldBuilder, build_system_context
     from world_store import build_canonical_lodging_fingerprint, create_world_store
 
 PUBLIC_DIR = Path(__file__).resolve().parents[1] / "public"
@@ -128,11 +133,29 @@ def _serialize_state_payload(state: ConversationState) -> dict:
     payload = state.to_dict()
     payload["rendering"] = build_rendering_context(state)
     _inject_inline_runtime_images(state, payload)
+    _defer_travel_option_images(state, payload)
     return payload
 
 
 def _serialize_state_response(state: ConversationState):
     return jsonify(_serialize_state_payload(state))
+
+
+def _defer_travel_option_images(state: ConversationState, payload: dict) -> None:
+    rendering = payload.get("rendering") if isinstance(payload, dict) else None
+    if not isinstance(rendering, dict):
+        return
+    if not (config.enable_inline_image_data and state.world_id and rendering.get("travel_selection")):
+        return
+
+    total = len(state.available_travel_options)
+    rendering["travel_options"] = []
+    rendering["travel_options_loading"] = total > 0
+    rendering["travel_options_progress"] = {
+        "loaded": 0,
+        "total": total,
+        "complete": total == 0,
+    }
 
 
 def _inject_inline_runtime_images(state: ConversationState, payload: dict) -> None:
@@ -190,6 +213,41 @@ def _inject_inline_runtime_images(state: ConversationState, payload: dict) -> No
                 payload["rendering"]["npc"]["headshot"]["inline"] = True
     except Exception as exc:  # pragma: no cover - best effort only
         app.logger.warning("inline image generation skipped | scene=%s | error=%s", state.scene_label, exc)
+
+
+def _inject_inline_image_for_travel_option(option_payload: dict[str, str], option_rendering: dict, *, scene_system_context: dict | None = None, npc_profile=None) -> None:
+    if not config.enable_inline_image_data:
+        return
+
+    try:
+        scene_specs = build_runtime_specs_for_scene(
+            scene_label=str(option_payload.get("label", "")),
+            location=str(option_payload.get("location", option_payload.get("label", ""))),
+            narrator_text=str(option_payload.get("narrator_text", option_payload.get("description", ""))),
+            npc_profile=npc_profile,
+            travel_options=None,
+            scene_description=str(option_payload.get("description", "")),
+            system_context=scene_system_context or {},
+        )
+        scene_spec = next(spec for spec in scene_specs if spec.kind == "scene_background")
+        cache_key = f"{scene_spec.kind}:{scene_spec.key}"
+        if cache_key not in inline_image_cache:
+            inline_image_cache.update(
+                generate_inline_asset_data_urls(
+                    specs=[scene_spec],
+                    model=config.inline_image_model,
+                    size=config.inline_image_size,
+                    best_effort=True,
+                )
+            )
+        data_url = inline_image_cache.get(cache_key)
+        if data_url:
+            option_rendering["background"]["url"] = data_url
+            option_rendering["background"]["exists"] = True
+            option_rendering["background"]["using_fallback"] = False
+            option_rendering["background"]["inline"] = True
+    except Exception as exc:  # pragma: no cover - best effort only
+        app.logger.warning("travel option inline image skipped | label=%s | error=%s", option_payload.get("label", ""), exc)
 
 
 @app.get("/")
@@ -348,6 +406,66 @@ def world_initialize():
     except Exception as exc:  # pragma: no cover - defensive API boundary
         app.logger.exception("world_initialize failed; using fallback scene data")
         return _build_static_fallback_response(reason=str(exc), requested_lodging_input=lodging_input)
+
+
+@app.post("/world/travel-options/next")
+def world_travel_options_next():
+    data = request.get_json(silent=True) or {}
+    world_id = str(data.get("world_id", "")).strip()
+    loaded_option_ids = data.get("loaded_option_ids", [])
+
+    if not world_id:
+        return jsonify({"error": "Missing or invalid 'world_id' string"}), 400
+    if not isinstance(loaded_option_ids, list):
+        return jsonify({"error": "Missing or invalid 'loaded_option_ids' list"}), 400
+
+    world_state = world_store.get_world(world_id)
+    if world_state is None:
+        return jsonify({"error": f"Unknown world_id: {world_id}"}), 404
+
+    loaded_ids = {str(item) for item in loaded_option_ids}
+    ordered_options = [
+        {
+            "location_id": scene.location_id,
+            "category": scene.category,
+            "label": scene.label,
+            "description": scene.description,
+            "location": scene.location,
+            "narrator_text": scene.narrator_text,
+        }
+        for scene in world_state.travel_scenes
+    ]
+
+    total = len(ordered_options)
+    next_index = None
+    next_option = None
+    for index, option in enumerate(ordered_options, start=1):
+        if str(option.get("location_id", "")) in loaded_ids:
+            continue
+        next_index = index
+        next_option = option
+        break
+
+    if next_option is None:
+        return jsonify(
+            {
+                "option": None,
+                "progress": {"loaded": len(loaded_ids), "total": total, "complete": True},
+            }
+        )
+
+    option_rendering = build_runtime_travel_option_rendering(next_option, index=next_index)
+    source_scene = next((scene for scene in world_state.travel_scenes if scene.location_id == str(next_option.get("location_id", ""))), None)
+    scene_system_context = build_system_context(source_scene, travel_scenes=world_state.travel_scenes, world_state=world_state) if source_scene is not None else {}
+    npc_profile = world_state.lodging_scene.npc_profile or get_initial_scene().npc_factory()
+    _inject_inline_image_for_travel_option(next_option, option_rendering, scene_system_context=scene_system_context, npc_profile=npc_profile)
+    progress_loaded = min(len(loaded_ids) + 1, total)
+    return jsonify(
+        {
+            "option": option_rendering,
+            "progress": {"loaded": progress_loaded, "total": total, "complete": progress_loaded >= total},
+        }
+    )
 
 
 @app.post("/conversation/initialize")

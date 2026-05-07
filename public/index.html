@@ -18,7 +18,7 @@
           <div class="scene-banner-copy">
             <p class="eyebrow">Current Scene</p>
             <h1 id="scene-label">TripWright</h1>
-            <p id="scene-location">Start with a hotel, inn, guesthouse, or Booking.com listing.</p>
+            <p id="scene-location">Begin with a hotel, inn, guesthouse, address, or Booking.com listing.</p>
             <p id="scene-description"></p>
           </div>
 
@@ -41,24 +41,24 @@
 
         <section class="startup-panel parchment-panel" id="startup-panel">
           <div class="startup-copy">
-            <p class="eyebrow">Dynamic world setup</p>
+            <p class="eyebrow">Plan your arrival</p>
             <h2>Start from your lodging</h2>
             <p>
-              Paste a Booking.com listing URL or enter a hotel, guesthouse, Airbnb-style rental,
-              or address. TripWright will build a local arrival scene plus three nearby destinations.
+              Paste a Booking.com listing URL or enter a hotel, guesthouse, rental stay, or full address.
+              TripWright will build an arrival scene and three nearby places to explore.
             </p>
           </div>
 
           <form class="startup-form" id="startup-form">
-            <label class="startup-label" for="lodging-input">Lodging input</label>
+            <label class="startup-label" for="lodging-input">Lodging</label>
             <textarea
               id="lodging-input"
               rows="3"
               placeholder="https://www.booking.com/hotel/... or The Hoxton Williamsburg"
             ></textarea>
             <div class="startup-actions">
-              <button id="startup-button" type="submit">Build world</button>
-              <span class="hint">Dynamic startup replaces the old static demo flow.</span>
+              <button id="startup-button" type="submit">Start journey</button>
+              <span class="hint">Booking.com links, lodging names, and full addresses are all supported.</span>
             </div>
           </form>
         </section>
@@ -71,7 +71,8 @@
           <div class="travel-panel-header">
             <p class="eyebrow">Choose the next location</p>
             <h2>Where do you want to go next?</h2>
-            <p class="travel-intro">Pick a destination below to continue.</p>
+            <p class="travel-intro" id="travel-intro">Choose your next stop to continue the trip.</p>
+            <p class="travel-progress" id="travel-progress" hidden></p>
           </div>
           <div class="travel-options" id="travel-options"></div>
         </section>
@@ -81,15 +82,26 @@
             <textarea
               id="user-input"
               rows="3"
-              placeholder="Talk to the character..."
+              placeholder="Write your reply..."
             ></textarea>
             <button id="send-button" type="submit">Send</button>
           </div>
           <div class="composer-actions">
-            <span class="hint">Enter to send · Shift+Enter for newline</span>
+            <span class="hint">Press Enter to send · Shift+Enter for a new line</span>
           </div>
         </form>
       </main>
+    </div>
+
+    <div class="world-loading-modal" id="world-loading-modal" hidden>
+      <div class="world-loading-card parchment-panel" role="status" aria-live="polite">
+        <p class="eyebrow">Preparing your trip</p>
+        <h2>Building your world...</h2>
+        <p>
+          This can take a little while because TripWright is resolving the location, researching the area,
+          and generating the opening scene. Please be patient and avoid refreshing the page.
+        </p>
+      </div>
     </div>
 
     <template id="message-template">

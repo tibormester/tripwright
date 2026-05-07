@@ -200,28 +200,27 @@ def build_rendering_context(state: ConversationState) -> dict[str, Any]:
 
 def _build_runtime_travel_options(options: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if options:
-        rendered_options = []
-        for index, option in enumerate(options, start=1):
-            location = str(option.get("location", option.get("label", "")))
-            narrator_text = str(option.get("narrator_text", option.get("description", "")))
-            category = str(option.get("category", ""))
-            scene_spec = build_scene_asset_spec(
-                location=location,
-                narrator_text=narrator_text,
-                label=str(option.get("label", "")),
-            )
-            rendered_options.append(
-                {
-                    "location_id": str(option.get("location_id", "")),
-                    "label": str(option.get("label", "Unknown destination")),
-                    "description": str(option.get("description", "")),
-                    "command": f"/command {index}",
-                    "background": _describe_runtime_asset(scene_spec, fallback_spec=_build_fallback_scene_asset_spec(category)),
-                }
-            )
-        return rendered_options
+        return [build_runtime_travel_option_rendering(option, index=index) for index, option in enumerate(options, start=1)]
 
     return [_build_travel_option_rendering(scene) for scene in TRAVEL_DESTINATIONS]
+
+
+def build_runtime_travel_option_rendering(option: dict[str, Any], *, index: int) -> dict[str, Any]:
+    location = str(option.get("location", option.get("label", "")))
+    narrator_text = str(option.get("narrator_text", option.get("description", "")))
+    category = str(option.get("category", ""))
+    scene_spec = build_scene_asset_spec(
+        location=location,
+        narrator_text=narrator_text,
+        label=str(option.get("label", "")),
+    )
+    return {
+        "location_id": str(option.get("location_id", "")),
+        "label": str(option.get("label", "Unknown destination")),
+        "description": str(option.get("description", "")),
+        "command": f"/command {index}",
+        "background": _describe_runtime_asset(scene_spec, fallback_spec=_build_fallback_scene_asset_spec(category)),
+    }
 
 
 def _build_travel_option_rendering(scene: SceneDefinition) -> dict[str, Any]:

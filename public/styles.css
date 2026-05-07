@@ -154,7 +154,7 @@ p {
 }
 
 #scene-label {
-  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  font-size: clamp(1.08rem, 2vw, 1.3rem);
   line-height: 1.05;
 }
 
@@ -163,12 +163,17 @@ p {
   line-height: 1.35;
 }
 
+#scene-location {
+  opacity: 0.95;
+}
+
 #scene-location,
 #scene-description,
 #npc-role,
 .message-meta,
 .hint,
 .travel-intro,
+.travel-progress,
 #status-text,
 .startup-copy p,
 .startup-label {
@@ -241,6 +246,10 @@ p {
   color: #24170c;
   font-weight: 700;
   min-width: 96px;
+}
+
+#startup-button {
+  min-width: 130px;
 }
 
 .secondary-button:hover,
@@ -457,10 +466,15 @@ p {
   padding: 18px 20px 20px;
 }
 
-.travel-panel-header {
+ .travel-panel-header {
   display: grid;
   gap: 6px;
   margin-bottom: 16px;
+}
+
+.travel-progress {
+  font-size: 0.95rem;
+  color: rgba(86, 60, 34, 0.92);
 }
 
 .travel-options {
@@ -546,6 +560,37 @@ button:disabled {
 
 textarea:disabled {
   cursor: default;
+}
+
+.world-loading-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(17, 11, 7, 0.52);
+  backdrop-filter: blur(4px);
+  padding: 24px;
+}
+
+.world-loading-card {
+  width: min(640px, 100%);
+  padding: 22px 24px;
+  display: grid;
+  gap: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 233, 0.18), rgba(255, 244, 215, 0.08)),
+    rgba(241, 227, 193, 0.92);
+}
+
+.world-loading-card h2 {
+  font-size: 1.28rem;
+  color: var(--ink);
+}
+
+.world-loading-card p:last-child {
+  color: rgba(73, 53, 34, 0.86);
+  line-height: 1.55;
 }
 
 .empty-state {
@@ -661,7 +706,8 @@ textarea:disabled {
   .travel-panel,
   .composer,
   .scene-banner,
-  .startup-panel {
+  .startup-panel,
+  .world-loading-card {
     padding-left: 14px;
     padding-right: 14px;
   }

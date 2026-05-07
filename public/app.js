@@ -12,6 +12,10 @@ const state = {
   travelTransitioning: false,
   startupVisible: true,
   lastLodgingInput: "",
+  worldLoadingVisible: false,
+  loadedTravelOptions: [],
+  travelOptionsProgress: null,
+  travelOptionsPolling: false,
 };
 
 const SPEAKER_AVATARS = {
@@ -39,12 +43,15 @@ const elements = {
   npcRole: document.getElementById("npc-role"),
   travelPanel: document.getElementById("travel-panel"),
   travelOptions: document.getElementById("travel-options"),
+  travelIntro: document.getElementById("travel-intro"),
+  travelProgress: document.getElementById("travel-progress"),
   messageTemplate: document.getElementById("message-template"),
   sceneFadeOverlay: document.getElementById("scene-fade-overlay"),
   startupPanel: document.getElementById("startup-panel"),
   startupForm: document.getElementById("startup-form"),
   startupInput: document.getElementById("lodging-input"),
   startupButton: document.getElementById("startup-button"),
+  worldLoadingModal: document.getElementById("world-loading-modal"),
 };
 
 async function apiRequest(method, path, body) {
@@ -81,8 +88,9 @@ async function initializeWorld(lodgingInput) {
   state.pendingUserTurn = null;
   state.travelTransitioning = false;
   state.lastLodgingInput = cleanedInput;
+  state.worldLoadingVisible = true;
   hideSceneFadeOverlay();
-  setBusy(true, "Building world…");
+  setBusy(true, "Preparing your trip…");
   render();
 
   try {
@@ -93,13 +101,16 @@ async function initializeWorld(lodgingInput) {
     state.world = payload.world || null;
     state.worldId = payload.world_id || null;
     state.startupVisible = false;
+    state.worldLoadingVisible = false;
     state.error = null;
-    setBusy(false, payload.cache_hit ? "Loaded cached world" : "World ready");
+    syncTravelOptionStateFromConversation();
+    setBusy(false, payload.cache_hit ? "Ready" : "Ready");
     render();
     if (!elements.composer.hidden) {
       elements.userInput.focus();
     }
   } catch (error) {
+    state.worldLoadingVisible = false;
     handleError(error);
     render();
   }
@@ -124,7 +135,7 @@ async function sendTurn(userInput, options = {}) {
     showSceneFadeOverlay();
   }
 
-  setBusy(true, "Waiting for response…");
+  setBusy(true, "Thinking…");
   render();
 
   try {
@@ -138,10 +149,11 @@ async function sendTurn(userInput, options = {}) {
       user_input: cleanedInput,
     });
     state.error = null;
+    syncTravelOptionStateFromConversation();
     markIncomingTurns(previousHistoryLength);
     state.pendingUserTurn = null;
     stopLoadingIndicator();
-    setBusy(false, "Connected");
+    setBusy(false, "Ready");
     render();
 
     if (useSceneFade) {
@@ -193,6 +205,7 @@ function handleError(error) {
 function render() {
   renderScene();
   renderStartup();
+  renderWorldLoadingModal();
   renderConversation();
   renderTravelOptions();
   updateComposerState();
@@ -206,6 +219,10 @@ function renderStartup() {
   }
 }
 
+function renderWorldLoadingModal() {
+  elements.worldLoadingModal.hidden = !state.worldLoadingVisible;
+}
+
 function renderScene() {
   const rendering = state.conversation?.rendering || {};
   const scene = rendering.scene || {};
@@ -213,12 +230,12 @@ function renderScene() {
   const background = scene.background || {};
   const backgroundUrl = resolveAssetUrl(background);
 
-  elements.sceneLabel.textContent = scene.label || (state.startupVisible ? "TripWright" : "Unknown Scene");
+  elements.sceneLabel.textContent = scene.label || (state.startupVisible ? "TripWright" : "Current Scene");
   elements.sceneLocation.textContent = scene.location || (state.startupVisible
-    ? "Start with a Booking.com listing or lodging query to generate your arrival scene."
+    ? "Give TripWright a lodging and it will build a tailored arrival scene."
     : "");
   elements.sceneDescription.textContent = scene.description || (state.startupVisible
-    ? "Dynamic lodging setup will resolve the place, research the area, and build your first scene."
+    ? "You will get a custom opening scene, a local host character, and three nearby places to visit."
     : "");
   elements.npcName.textContent = npc.name || "—";
   elements.npcRole.textContent = npc.role || "—";
@@ -248,7 +265,7 @@ function renderConversation() {
   if (!history.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "No conversation yet.";
+    empty.textContent = "Your conversation will appear here once the scene begins.";
     elements.chatLog.appendChild(empty);
     return;
   }
@@ -310,14 +327,33 @@ function renderConversation() {
 
 function renderTravelOptions() {
   const rendering = state.conversation?.rendering || {};
-  const options = Array.isArray(rendering.travel_options) ? rendering.travel_options : [];
-  const isVisible = !state.startupVisible && Boolean(rendering.travel_selection && options.length);
+  const loading = Boolean(rendering.travel_options_loading);
+  const progress = state.travelOptionsProgress || rendering.travel_options_progress || null;
+  const options = state.loadedTravelOptions.length
+    ? state.loadedTravelOptions
+    : (Array.isArray(rendering.travel_options) ? rendering.travel_options : []);
+  const isVisible = !state.startupVisible && Boolean(rendering.travel_selection && (loading || options.length));
 
   elements.travelPanel.hidden = !isVisible;
   elements.travelOptions.innerHTML = "";
 
   if (!isVisible) {
     return;
+  }
+
+  if (loading) {
+    elements.travelIntro.textContent = "Your next destinations are loading. The latest reply is ready — hang tight for the options.";
+    if (progress) {
+      elements.travelProgress.hidden = false;
+      elements.travelProgress.textContent = `Loading destination art ${progress.loaded || 0}/${progress.total || 0}...`;
+    } else {
+      elements.travelProgress.hidden = false;
+      elements.travelProgress.textContent = "Loading destination art...";
+    }
+  } else {
+    elements.travelIntro.textContent = "Choose your next stop to continue the trip.";
+    elements.travelProgress.hidden = true;
+    elements.travelProgress.textContent = "";
   }
 
   for (const [index, option] of options.entries()) {
@@ -345,12 +381,69 @@ function renderTravelOptions() {
     button.type = "button";
     button.className = "travel-command";
     button.textContent = "Travel here";
-    button.disabled = state.busy;
+    button.disabled = state.busy || loading;
     button.addEventListener("click", () => sendTurn(option.command || "", { silent: true, useSceneFade: true }));
 
     copy.append(title, description);
     card.append(thumb, copy, button);
     elements.travelOptions.appendChild(card);
+  }
+}
+
+function syncTravelOptionStateFromConversation() {
+  const rendering = state.conversation?.rendering || {};
+  const isSelection = Boolean(rendering.travel_selection);
+  const loading = Boolean(rendering.travel_options_loading);
+
+  if (!isSelection) {
+    state.loadedTravelOptions = [];
+    state.travelOptionsProgress = null;
+    state.travelOptionsPolling = false;
+    return;
+  }
+
+  const immediateOptions = Array.isArray(rendering.travel_options) ? rendering.travel_options : [];
+  if (immediateOptions.length) {
+    state.loadedTravelOptions = immediateOptions;
+  }
+  state.travelOptionsProgress = rendering.travel_options_progress || null;
+
+  if (loading && !state.travelOptionsPolling && state.worldId) {
+    state.travelOptionsPolling = true;
+    void loadTravelOptionsSequentially();
+  }
+}
+
+async function loadTravelOptionsSequentially() {
+  try {
+    while (state.conversation?.rendering?.travel_selection) {
+      const loadedIds = state.loadedTravelOptions.map((option) => option.location_id);
+      const payload = await apiRequest("POST", "/world/travel-options/next", {
+        world_id: state.worldId,
+        loaded_option_ids: loadedIds,
+      });
+
+      if (payload?.option) {
+        state.loadedTravelOptions = [...state.loadedTravelOptions, payload.option];
+      }
+      state.travelOptionsProgress = payload?.progress || state.travelOptionsProgress;
+
+      if (state.travelOptionsProgress?.complete) {
+        if (state.conversation?.rendering) {
+          state.conversation.rendering.travel_options_loading = false;
+          state.conversation.rendering.travel_options_progress = state.travelOptionsProgress;
+          state.conversation.rendering.travel_options = state.loadedTravelOptions;
+        }
+        break;
+      }
+
+      renderTravelOptions();
+    }
+  } catch (error) {
+    handleError(error);
+  } finally {
+    state.travelOptionsPolling = false;
+    render();
   }
 }
 
@@ -364,7 +457,7 @@ function updateComposerState() {
   elements.sendButton.disabled = disabled;
   elements.userInput.placeholder = travelSelection
     ? "Choose a destination below to continue."
-    : "Talk to the character...";
+    : "Write your reply...";
 }
 
 function getDisplayHistory() {
@@ -563,7 +656,11 @@ elements.restartButton.addEventListener("click", () => {
   state.pendingUserTurn = null;
   state.travelTransitioning = false;
   state.startupVisible = true;
+  state.loadedTravelOptions = [];
+  state.travelOptionsProgress = null;
+  state.travelOptionsPolling = false;
   state.error = null;
+  state.worldLoadingVisible = false;
   setBusy(false, "Ready");
   render();
   elements.startupInput.focus();
