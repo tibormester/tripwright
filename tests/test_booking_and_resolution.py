@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from backend.location.booking_parser import is_booking_url, is_probable_url, parse_booking_page
+from backend.location.booking_parser import extract_lodging_query_from_url, is_booking_url, is_probable_url, parse_booking_page
 from backend.location.providers import NominatimPlace
 from backend.location.service import LodgingResolutionService
 from backend.config import AppConfig
@@ -67,6 +67,10 @@ class BookingAndResolutionTests(unittest.TestCase):
         self.assertTrue(is_probable_url("https://example.com/hotel"))
         self.assertTrue(is_booking_url("https://www.booking.com/hotel/us/demo.html"))
         self.assertFalse(is_booking_url("https://example.com/hotel"))
+        self.assertEqual(
+            extract_lodging_query_from_url("https://www.booking.com/hotel/us/the-hoxton-williamsburg.html?label=abc123xyz"),
+            "the hoxton williamsburg",
+        )
 
     def test_lodging_resolution_falls_back_to_geocoding(self) -> None:
         provider = FakeNominatimProvider()
@@ -95,6 +99,19 @@ class BookingAndResolutionTests(unittest.TestCase):
         self.assertEqual(result.location_context.input_kind, "booking_url")
         self.assertEqual(result.location_context.canonical_name, "The Hoxton Williamsburg")
         self.assertEqual(result.booking_metadata.name, "The Hoxton Williamsburg")
+
+    def test_booking_url_resolution_uses_url_slug_when_fetch_fails(self) -> None:
+        provider = FakeNominatimProvider()
+        service = LodgingResolutionService(
+            AppConfig(booking_fetch_enabled=True, geocoding_enabled=True),
+            nominatim_provider=provider,
+        )
+
+        with patch("backend.location.service.fetch_booking_page", side_effect=RuntimeError("blocked")):
+            result = service.resolve("https://www.booking.com/hotel/us/the-hoxton-williamsburg.html?label=abc123xyz")
+
+        self.assertEqual(provider.last_query, "the hoxton williamsburg")
+        self.assertEqual(result.location_context.canonical_name, "The Hoxton Williamsburg")
 
 
 if __name__ == "__main__":

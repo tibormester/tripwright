@@ -7,6 +7,7 @@ from typing import Any
 from ..config import AppConfig
 from .booking_parser import (
     BookingPageMetadata,
+    extract_lodging_query_from_url,
     fetch_booking_page,
     infer_lodging_type_hint,
     is_booking_url,
@@ -112,6 +113,12 @@ class LodgingResolutionService:
             query = booking_metadata.build_query().strip()
             if query:
                 return query
+
+        if is_probable_url(lodging_input):
+            extracted_query = extract_lodging_query_from_url(lodging_input)
+            if extracted_query:
+                return extracted_query
+
         return lodging_input
 
     def _build_location_context(
@@ -126,6 +133,7 @@ class LodgingResolutionService:
         canonical_name = _first_non_empty(
             geocoded_place.name if geocoded_place else "",
             booking_metadata.name if booking_metadata else "",
+            extract_lodging_query_from_url(lodging_input) if input_kind in {"booking_url", "url"} else "",
             lodging_input,
         )
         formatted_address = _first_non_empty(

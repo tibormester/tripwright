@@ -169,6 +169,7 @@ def build_rendering_context(state: ConversationState) -> dict[str, Any]:
     base_location = _strip_travel_selection_suffix(state.location)
     narrator_text = _find_first_turn_dialogue(state.conversation_history, speaker="Narrator") or _extract_narrator_text(state)
     matched_scene = _find_scene_by_location(base_location)
+    scene_category = _extract_scene_category(state)
 
     scene_label = state.scene_label or (matched_scene.label if matched_scene else _humanize_location(base_location))
     scene_spec = build_scene_asset_spec(
@@ -176,19 +177,21 @@ def build_rendering_context(state: ConversationState) -> dict[str, Any]:
         narrator_text=narrator_text or (matched_scene.narrator_text if matched_scene else ""),
         label=scene_label,
     )
+    scene_fallback_spec = _build_fallback_scene_asset_spec(scene_category)
     npc_spec = build_npc_asset_spec(state.npc_profile)
+    npc_fallback_spec = _build_fallback_npc_asset_spec(scene_category)
 
     return {
         "scene": {
             "label": scene_label,
             "location": base_location,
             "description": state.scene_description,
-            "background": _describe_runtime_asset(scene_spec),
+            "background": _describe_runtime_asset(scene_spec, fallback_spec=scene_fallback_spec),
         },
         "npc": {
             "name": state.npc_profile.name,
             "role": state.npc_profile.role,
-            "headshot": _describe_runtime_asset(npc_spec),
+            "headshot": _describe_runtime_asset(npc_spec, fallback_spec=npc_fallback_spec),
         },
         "travel_selection": is_travel_selection_location(state.location),
         "travel_options": _build_runtime_travel_options(state.available_travel_options),
@@ -201,6 +204,7 @@ def _build_runtime_travel_options(options: list[dict[str, Any]]) -> list[dict[st
         for index, option in enumerate(options, start=1):
             location = str(option.get("location", option.get("label", "")))
             narrator_text = str(option.get("narrator_text", option.get("description", "")))
+            category = str(option.get("category", ""))
             scene_spec = build_scene_asset_spec(
                 location=location,
                 narrator_text=narrator_text,
@@ -212,7 +216,7 @@ def _build_runtime_travel_options(options: list[dict[str, Any]]) -> list[dict[st
                     "label": str(option.get("label", "Unknown destination")),
                     "description": str(option.get("description", "")),
                     "command": f"/command {index}",
-                    "background": _describe_runtime_asset(scene_spec),
+                    "background": _describe_runtime_asset(scene_spec, fallback_spec=_build_fallback_scene_asset_spec(category)),
                 }
             )
         return rendered_options
@@ -250,13 +254,17 @@ def _travel_command_number(location_id: str) -> int:
     return 1
 
 
-def _describe_runtime_asset(spec: ImageAssetSpec) -> dict[str, Any]:
+def _describe_runtime_asset(spec: ImageAssetSpec, fallback_spec: ImageAssetSpec | None = None) -> dict[str, Any]:
     exists = spec.output_path.is_file()
+    fallback_exists = bool(fallback_spec and fallback_spec.output_path.is_file())
+    resolved_spec = spec if exists or not fallback_exists else fallback_spec
     return {
         "key": spec.key,
         "exists": exists,
-        "url": spec.url_path,
-        "relative_path": spec.relative_path,
+        "url": resolved_spec.url_path if resolved_spec else None,
+        "relative_path": resolved_spec.relative_path if resolved_spec else spec.relative_path,
+        "fallback_url": fallback_spec.url_path if fallback_exists and fallback_spec is not None else None,
+        "using_fallback": not exists and fallback_exists,
     }
 
 
@@ -272,6 +280,39 @@ def _describe_asset(spec: ImageAssetSpec) -> dict[str, Any]:
         "metadata_relative_path": spec.metadata_relative_path,
         "source": spec.source,
     }
+
+
+def _extract_scene_category(state: ConversationState) -> str:
+    system_context = state.system_context if isinstance(state.system_context, dict) else {}
+    return str(system_context.get("scene_category", "")).strip().lower()
+
+
+def _build_fallback_scene_asset_spec(category: str) -> ImageAssetSpec | None:
+    normalized = (category or "").strip().lower()
+    if normalized == "cafe":
+        scene = TRAVEL_DESTINATIONS[0]
+    elif normalized == "park":
+        scene = TRAVEL_DESTINATIONS[1]
+    elif normalized == "bookstore":
+        scene = TRAVEL_DESTINATIONS[2]
+    else:
+        scene = get_initial_scene()
+
+    return build_scene_asset_spec(location=scene.location, narrator_text=scene.narrator_text, label=scene.label)
+
+
+def _build_fallback_npc_asset_spec(category: str) -> ImageAssetSpec | None:
+    normalized = (category or "").strip().lower()
+    if normalized == "cafe":
+        profile = TRAVEL_DESTINATIONS[0].npc_factory()
+    elif normalized == "park":
+        profile = TRAVEL_DESTINATIONS[1].npc_factory()
+    elif normalized == "bookstore":
+        profile = TRAVEL_DESTINATIONS[2].npc_factory()
+    else:
+        profile = get_initial_scene().npc_factory()
+
+    return build_npc_asset_spec(profile)
 
 
 def _find_scene_by_location(location: str) -> SceneDefinition | None:

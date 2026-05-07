@@ -6,7 +6,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from typing import TYPE_CHECKING
 
@@ -66,6 +66,25 @@ def is_booking_url(value: str) -> bool:
     parsed = urlparse((value or "").strip())
     hostname = (parsed.hostname or "").lower()
     return hostname in BOOKING_HOSTS or hostname.endswith(".booking.com")
+
+
+def extract_lodging_query_from_url(value: str) -> str:
+    parsed = urlparse((value or "").strip())
+    path_parts = [part for part in parsed.path.split("/") if part]
+    if not path_parts:
+        return ""
+
+    candidate = path_parts[-1]
+    candidate = unquote(candidate)
+    candidate = re.sub(r"\.[a-zA-Z0-9]+$", "", candidate)
+    candidate = re.sub(r"^[a-z]{2}(?:-[a-z]{2})?-", "", candidate)
+    candidate = re.sub(r"[-_]+", " ", candidate)
+    candidate = re.sub(r"\s+", " ", candidate).strip()
+
+    ignored = {"hotel", "hotels", "searchresults", "index", "share"}
+    if candidate.lower() in ignored:
+        return ""
+    return candidate
 
 
 def fetch_booking_page(url: str, timeout_seconds: float = 10.0, max_retries: int = 0) -> str:
