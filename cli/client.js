@@ -90,7 +90,7 @@ async function initializeWorld(lodgingInput) {
 
 async function sendUserTurn(state, worldId, userInput) {
   return request("POST", "/conversation/turn", {
-    state,
+    state: buildConversationStateForRequest(state),
     world_id: worldId,
     user_input: userInput,
   });
@@ -98,6 +98,15 @@ async function sendUserTurn(state, worldId, userInput) {
 
 function askQuestion(rl, prompt) {
   return new Promise((resolve) => rl.question(prompt, resolve));
+}
+
+function buildConversationStateForRequest(conversation) {
+  if (!conversation || typeof conversation !== "object") {
+    return conversation;
+  }
+
+  const { rendering: _rendering, ...rest } = conversation;
+  return rest;
 }
 
 function printConversationEnvelope(envelope) {

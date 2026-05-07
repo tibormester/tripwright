@@ -133,7 +133,7 @@ async function sendTurn(userInput, options = {}) {
       : 0;
 
     state.conversation = await apiRequest("POST", "/conversation/turn", {
-      state: state.conversation,
+      state: buildConversationStateForRequest(state.conversation),
       world_id: state.worldId,
       user_input: cleanedInput,
     });
@@ -427,6 +427,32 @@ function getSpeakerAvatarUrl({ speaker, kind, npcHeadshotUrl }) {
   }
 
   return SPEAKER_AVATARS[speaker] || null;
+}
+
+function buildConversationStateForRequest(conversation) {
+  if (!conversation || typeof conversation !== "object") {
+    return conversation;
+  }
+
+  const {
+    rendering: _rendering,
+    ...rest
+  } = conversation;
+
+  const sanitizedHistory = Array.isArray(rest.conversation_history)
+    ? rest.conversation_history.map((turn) => {
+        if (!turn || typeof turn !== "object") {
+          return turn;
+        }
+        const { incoming: _incoming, pending: _pending, ...cleanTurn } = turn;
+        return cleanTurn;
+      })
+    : [];
+
+  return {
+    ...rest,
+    conversation_history: sanitizedHistory,
+  };
 }
 
 function resolveAssetUrl(asset) {
