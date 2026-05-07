@@ -17,6 +17,13 @@ const state = {
   loadedTravelOptions: [],
   travelOptionsProgress: null,
   travelOptionsPolling: false,
+  logsOpen: false,
+  logsEntries: [],
+  logsLastId: 0,
+  logsPollingTimer: null,
+  logsRequestInFlight: false,
+  logsStickToBottom: true,
+  logsError: null,
 };
 
 const SPEAKER_AVATARS = {
@@ -53,6 +60,11 @@ const elements = {
   startupInput: document.getElementById("lodging-input"),
   startupButton: document.getElementById("startup-button"),
   worldLoadingModal: document.getElementById("world-loading-modal"),
+  logsToggleButton: document.getElementById("logs-toggle-button"),
+  logsOverlay: document.getElementById("logs-overlay"),
+  logsCloseButton: document.getElementById("logs-close-button"),
+  logsStatus: document.getElementById("logs-status"),
+  logsList: document.getElementById("logs-list"),
 };
 
 async function apiRequest(method, path, body) {
@@ -209,6 +221,7 @@ function render() {
   renderWorldLoadingModal();
   renderConversation();
   renderTravelOptions();
+  renderLogs();
   updateComposerState();
 }
 
@@ -222,6 +235,64 @@ function renderStartup() {
 
 function renderWorldLoadingModal() {
   elements.worldLoadingModal.hidden = !state.worldLoadingVisible;
+}
+
+function renderLogs() {
+  const shouldStickToBottom = state.logsStickToBottom;
+  elements.logsOverlay.hidden = !state.logsOpen;
+  elements.logsToggleButton.textContent = state.logsOpen ? "Hide logs" : "View logs";
+  elements.logsToggleButton.setAttribute("aria-expanded", String(state.logsOpen));
+
+  if (state.logsError) {
+    elements.logsStatus.textContent = `Log stream unavailable: ${state.logsError}`;
+  } else if (state.logsRequestInFlight && !state.logsEntries.length) {
+    elements.logsStatus.textContent = "Loading logs…";
+  } else if (state.logsEntries.length) {
+    elements.logsStatus.textContent = `${state.logsEntries.length} recent log entries`;
+  } else {
+    elements.logsStatus.textContent = "Waiting for logs…";
+  }
+
+  elements.logsList.innerHTML = "";
+
+  if (!state.logsEntries.length) {
+    const empty = document.createElement("div");
+    empty.className = "logs-empty-state";
+    empty.textContent = state.logsRequestInFlight ? "Fetching logs…" : "No logs captured yet.";
+    elements.logsList.appendChild(empty);
+  } else {
+    for (const entry of state.logsEntries) {
+      const item = document.createElement("article");
+      item.className = "log-entry";
+
+      const meta = document.createElement("div");
+      meta.className = "log-entry-meta";
+
+      const level = document.createElement("span");
+      level.className = `log-level log-level-${String(entry.level || "").toLowerCase()}`;
+      level.textContent = entry.level || "LOG";
+
+      const timestamp = document.createElement("span");
+      timestamp.className = "log-entry-timestamp";
+      timestamp.textContent = formatLogTimestamp(entry.timestamp);
+
+      const logger = document.createElement("span");
+      logger.className = "log-entry-logger";
+      logger.textContent = entry.logger || "root";
+
+      const body = document.createElement("pre");
+      body.className = "log-entry-body";
+      body.textContent = entry.message || "";
+
+      meta.append(level, timestamp, logger);
+      item.append(meta, body);
+      elements.logsList.appendChild(item);
+    }
+  }
+
+  if (shouldStickToBottom) {
+    elements.logsList.scrollTop = elements.logsList.scrollHeight;
+  }
 }
 
 function renderScene() {
@@ -586,6 +657,89 @@ function resolveFallbackAssetUrl(asset) {
   return asset.fallback_url || null;
 }
 
+function formatLogTimestamp(value) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) {
+    return String(value);
+  }
+
+  return timestamp.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function openLogsOverlay() {
+  state.logsOpen = true;
+  state.logsError = null;
+  state.logsStickToBottom = true;
+  startLogsPolling();
+  renderLogs();
+}
+
+function closeLogsOverlay() {
+  state.logsOpen = false;
+  stopLogsPolling();
+  renderLogs();
+}
+
+function toggleLogsOverlay() {
+  if (state.logsOpen) {
+    closeLogsOverlay();
+    return;
+  }
+  openLogsOverlay();
+}
+
+function startLogsPolling() {
+  if (state.logsPollingTimer !== null) {
+    return;
+  }
+
+  void fetchLogs();
+  state.logsPollingTimer = window.setInterval(() => {
+    void fetchLogs();
+  }, 1000);
+}
+
+function stopLogsPolling() {
+  if (state.logsPollingTimer !== null) {
+    window.clearInterval(state.logsPollingTimer);
+    state.logsPollingTimer = null;
+  }
+}
+
+async function fetchLogs() {
+  if (state.logsRequestInFlight) {
+    return;
+  }
+
+  state.logsRequestInFlight = true;
+  renderLogs();
+
+  try {
+    const payload = await apiRequest("GET", `/debug/logs?after=${encodeURIComponent(state.logsLastId)}&limit=200`);
+    const incomingLogs = Array.isArray(payload?.logs) ? payload.logs : [];
+
+    if (incomingLogs.length) {
+      state.logsEntries = [...state.logsEntries, ...incomingLogs].slice(-400);
+      state.logsLastId = Number(payload?.next_after || incomingLogs[incomingLogs.length - 1]?.id || state.logsLastId);
+    }
+
+    state.logsError = null;
+  } catch (error) {
+    state.logsError = error instanceof Error ? error.message : String(error);
+  } finally {
+    state.logsRequestInFlight = false;
+    renderLogs();
+  }
+}
+
 function smoothScrollChatToBottom() {
   elements.chatLog.scrollTo({
     top: elements.chatLog.scrollHeight,
@@ -656,6 +810,25 @@ elements.userInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     elements.composer.requestSubmit();
+  }
+});
+
+elements.logsToggleButton.addEventListener("click", () => {
+  toggleLogsOverlay();
+});
+
+elements.logsCloseButton.addEventListener("click", () => {
+  closeLogsOverlay();
+});
+
+elements.logsList.addEventListener("scroll", () => {
+  const distanceFromBottom = elements.logsList.scrollHeight - elements.logsList.scrollTop - elements.logsList.clientHeight;
+  state.logsStickToBottom = distanceFromBottom < 24;
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.logsOpen) {
+    closeLogsOverlay();
   }
 });
 

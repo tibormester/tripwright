@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from collections import deque
+from datetime import datetime, timezone
 import logging
 from pathlib import Path
+from threading import Lock
 import time
 
 from flask import Flask, jsonify, request
@@ -48,6 +51,54 @@ app = Flask(__name__, static_folder=str(PUBLIC_DIR), static_url_path="")
 if not app.logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 app.logger.setLevel(logging.INFO)
+
+
+class RecentLogsBufferHandler(logging.Handler):
+    def __init__(self, *, max_entries: int = 1000) -> None:
+        super().__init__(level=logging.INFO)
+        self._entries: deque[dict[str, str | int]] = deque(maxlen=max_entries)
+        self._lock = Lock()
+        self._next_id = 0
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = self.format(record)
+        except Exception:  # pragma: no cover - defensive logging boundary
+            message = record.getMessage()
+
+        entry = {
+            "id": 0,
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": message,
+        }
+
+        with self._lock:
+            self._next_id += 1
+            entry["id"] = self._next_id
+            self._entries.append(entry)
+
+    def get_entries(self, *, after: int = 0, limit: int = 200) -> list[dict[str, str | int]]:
+        with self._lock:
+            filtered = [entry.copy() for entry in self._entries if int(entry["id"]) > after]
+        if limit > 0:
+            return filtered[:limit]
+        return filtered
+
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+existing_recent_logs_handler = next(
+    (handler for handler in root_logger.handlers if isinstance(handler, RecentLogsBufferHandler)),
+    None,
+)
+if existing_recent_logs_handler is None:
+    recent_logs_handler = RecentLogsBufferHandler()
+    recent_logs_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+    root_logger.addHandler(recent_logs_handler)
+else:
+    recent_logs_handler = existing_recent_logs_handler
 
 config = AppConfig.from_env()
 world_store = create_world_store(config)
@@ -273,6 +324,23 @@ def health() -> tuple[dict[str, str], int]:
 @app.get("/assets/manifest")
 def assets_manifest():
     return jsonify(build_static_asset_manifest())
+
+
+@app.get("/debug/logs")
+def debug_logs():
+    try:
+        after = max(int(request.args.get("after", "0")), 0)
+    except ValueError:
+        after = 0
+
+    try:
+        limit = min(max(int(request.args.get("limit", "200")), 1), 500)
+    except ValueError:
+        limit = 200
+
+    entries = recent_logs_handler.get_entries(after=after, limit=limit)
+    next_after = int(entries[-1]["id"]) if entries else after
+    return jsonify({"logs": entries, "next_after": next_after})
 
 
 def _best_effort_generate_runtime_assets(state: ConversationState) -> None:

@@ -226,7 +226,8 @@ p {
 .secondary-button,
 #send-button,
 .travel-command,
-#startup-button {
+#startup-button,
+.logs-toggle-button {
   border: 1px solid rgba(111, 77, 46, 0.4);
   border-radius: 999px;
   padding: 11px 18px;
@@ -236,7 +237,8 @@ p {
 }
 
 .secondary-button,
-.travel-command {
+.travel-command,
+.logs-toggle-button {
   background: linear-gradient(180deg, rgba(239, 224, 189, 0.86), rgba(220, 192, 142, 0.82));
 }
 
@@ -255,9 +257,137 @@ p {
 .secondary-button:hover,
 #send-button:hover,
 .travel-command:hover,
-#startup-button:hover {
+#startup-button:hover,
+.logs-toggle-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 16px rgba(67, 41, 15, 0.14);
+}
+
+.logs-toggle-button {
+  position: fixed;
+  top: 16px;
+  right: 18px;
+  z-index: 60;
+  padding: 9px 14px;
+  font-size: 0.9rem;
+}
+
+.logs-overlay {
+  position: fixed;
+  top: 60px;
+  right: 18px;
+  width: min(760px, calc(100vw - 36px));
+  max-height: calc(100vh - 78px);
+  z-index: 61;
+  pointer-events: none;
+}
+
+.logs-card {
+  height: 100%;
+  max-height: calc(100vh - 78px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 233, 0.18), rgba(255, 244, 215, 0.08)),
+    rgba(35, 24, 15, 0.94);
+  color: var(--text-light);
+  pointer-events: auto;
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.logs-header-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.logs-status {
+  color: rgba(255, 239, 208, 0.76);
+}
+
+.logs-list {
+  min-height: 220px;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  padding-right: 4px;
+  display: grid;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(231, 207, 170, 0.65) rgba(47, 36, 25, 0.25);
+}
+
+.logs-empty-state {
+  padding: 18px;
+  border: 1px dashed rgba(243, 222, 186, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 239, 208, 0.76);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.log-entry {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(243, 222, 186, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.log-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.log-level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.log-level-info {
+  background: rgba(107, 139, 75, 0.18);
+  color: #dcebbf;
+}
+
+.log-level-warning {
+  background: rgba(192, 138, 62, 0.22);
+  color: #f7deb0;
+}
+
+.log-level-error,
+.log-level-critical {
+  background: rgba(164, 77, 47, 0.22);
+  color: #ffd4c8;
+}
+
+.log-entry-timestamp,
+.log-entry-logger {
+  color: rgba(255, 239, 208, 0.7);
+}
+
+.log-entry-body {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "Consolas", "SFMono-Regular", "Menlo", monospace;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-light);
 }
 
 .startup-panel {
@@ -531,7 +661,8 @@ p {
 .startup-panel[hidden],
 .chat-panel[hidden],
 .world-loading-modal[hidden],
-.travel-progress[hidden] {
+.travel-progress[hidden],
+.logs-overlay[hidden] {
   display: none !important;
 }
 
@@ -628,6 +759,18 @@ textarea:disabled {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .logs-toggle-button {
+    top: 12px;
+    right: 12px;
+  }
+
+  .logs-overlay {
+    top: 54px;
+    right: 12px;
+    width: min(760px, calc(100vw - 24px));
+    max-height: calc(100vh - 66px);
+  }
 }
 
 @keyframes fade-loading-pulse {
@@ -709,7 +852,8 @@ textarea:disabled {
   .composer,
   .scene-banner,
   .startup-panel,
-  .world-loading-card {
+  .world-loading-card,
+  .logs-card {
     padding-left: 14px;
     padding-right: 14px;
   }
@@ -740,5 +884,18 @@ textarea:disabled {
   .message-avatar {
     width: 46px;
     height: 46px;
+  }
+
+  .logs-header {
+    flex-direction: column;
+  }
+
+  .logs-card {
+    max-height: calc(100vh - 66px);
+  }
+
+  .logs-list {
+    min-height: 180px;
+    max-height: calc(100vh - 190px);
   }
 }

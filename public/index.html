@@ -93,6 +93,30 @@
       </main>
     </div>
 
+    <button
+      id="logs-toggle-button"
+      class="logs-toggle-button"
+      type="button"
+      aria-expanded="false"
+      aria-controls="logs-overlay"
+    >
+      View logs
+    </button>
+
+    <section class="logs-overlay" id="logs-overlay" hidden aria-label="Runtime logs">
+      <div class="logs-card parchment-panel">
+        <div class="logs-header">
+          <div class="logs-header-copy">
+            <p class="eyebrow">Debug</p>
+            <h2>Runtime logs</h2>
+            <p class="logs-status" id="logs-status">Waiting for logs…</p>
+          </div>
+          <button id="logs-close-button" class="secondary-button" type="button">Close</button>
+        </div>
+        <div class="logs-list" id="logs-list" aria-live="polite"></div>
+      </div>
+    </section>
+
     <div class="world-loading-modal" id="world-loading-modal" hidden>
       <div class="world-loading-card parchment-panel" role="status" aria-live="polite">
         <p class="eyebrow">Preparing your trip</p>
