@@ -24,10 +24,10 @@ class AssetRenderingTests(unittest.TestCase):
             )
         )
 
-        self.assertIn("stylized painterly digital illustration", scene_spec.prompt)
-        self.assertIn("soft color palette", scene_spec.prompt)
-        self.assertIn("stylized painterly digital character portrait", npc_spec.prompt)
-        self.assertIn("soft color palette", npc_spec.prompt)
+        self.assertIn("stylized game-art illustration", scene_spec.prompt)
+        self.assertIn("Avoid uncanny-valley realism", scene_spec.prompt)
+        self.assertIn("stylized game-art character portrait", npc_spec.prompt)
+        self.assertIn("Avoid uncanny-valley realism", npc_spec.prompt)
 
     def test_runtime_rendering_uses_static_fallback_assets_when_dynamic_assets_are_missing(self) -> None:
         state = ConversationState(

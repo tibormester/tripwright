@@ -17,12 +17,12 @@ SCENE_DIR = GENERATED_ROOT / "scenes"
 NPC_DIR = GENERATED_ROOT / "npcs"
 
 SCENE_ART_STYLE = (
-    "stylized painterly digital illustration for a narrative travel adventure game, "
-    "soft color palette, gently diffused lighting, subtly simplified forms, hand-painted concept-art feel, no text, no UI"
+    "stylized game-art illustration for a narrative travel adventure game, "
+    "painterly but not photorealistic, soft color palette, gently diffused lighting, simplified readable shapes, polished hand-painted environment art, no text, no UI"
 )
 NPC_ART_STYLE = (
-    "stylized painterly digital character portrait for a narrative travel adventure game, "
-    "clean head-and-shoulders framing, soft color palette, gentle lighting, slightly simplified features, polished hand-painted concept-art feel, no text, no UI"
+    "stylized game-art character portrait for a narrative travel adventure game, "
+    "painterly but not photorealistic, clean head-and-shoulders framing, soft color palette, gentle lighting, slightly simplified facial features, polished hand-painted character art, no text, no UI"
 )
 
 
@@ -112,6 +112,8 @@ def build_npc_asset_spec(npc_profile: NPCProfile) -> ImageAssetSpec:
 def build_scene_image_prompt(*, location: str, narrator_text: str) -> str:
     return (
         f"Create a scene background image for a browser-based narrative RPG. Style: {SCENE_ART_STYLE}. "
+        "Avoid uncanny-valley realism, photographic skin detail, camera-lens realism, and live-action aesthetics. "
+        "Lean toward stylized video-game concept art with appealing, readable forms and a cohesive painted look. "
         "Focus on the environment and mood rather than a character portrait. "
         "If people appear, they should be small and incidental in the composition. "
         f"Location: {location}. "
@@ -122,6 +124,8 @@ def build_scene_image_prompt(*, location: str, narrator_text: str) -> str:
 def build_npc_headshot_prompt(npc_profile: NPCProfile) -> str:
     return (
         f"Create an NPC portrait for a browser-based narrative RPG. Style: {NPC_ART_STYLE}. "
+        "Avoid uncanny-valley realism, hyper-detailed skin texture, photographic rendering, and live-action aesthetics. "
+        "Lean toward stylized video-game character art that feels expressive, attractive, and clearly designed rather than fully realistic. "
         "Single character only, framed from the shoulders up, with a neutral background or softly implied setting. "
         f"Name: {npc_profile.name}. "
         f"Role: {npc_profile.role}. "
