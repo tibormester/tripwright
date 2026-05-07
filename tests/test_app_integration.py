@@ -82,14 +82,14 @@ class AppIntegrationTests(unittest.TestCase):
         self.call_model_patch.start()
         self.addCleanup(self.call_model_patch.stop)
 
-        self.inline_image_patch = patch(
+        self.inline_image_patcher = patch(
             "backend.app.generate_inline_asset_data_urls",
             side_effect=lambda specs, model, size, best_effort=False: {
                 f"{spec.kind}:{spec.key}": "data:image/png;base64,dGVzdA==" for spec in specs
             },
         )
-        self.inline_image_patch.start()
-        self.addCleanup(self.inline_image_patch.stop)
+        self.inline_image_patch = self.inline_image_patcher.start()
+        self.addCleanup(self.inline_image_patcher.stop)
 
     def _fake_call_model(self, prompt: str) -> DialogueTurn:
         dialogue = "Welcome — I can help you get oriented and point you somewhere nearby."
@@ -141,6 +141,8 @@ class AppIntegrationTests(unittest.TestCase):
 
     def test_travel_options_endpoint_streams_one_option_at_a_time(self) -> None:
         initialized = self.client.post("/world/initialize", json={"lodging_input": "The Hoxton Williamsburg"}).get_json()
+        self.inline_image_patch.reset_mock()
+
         state = backend_app.ConversationState.from_dict(initialized["conversation"])
         state.location = state.location + " [travel-selection]"
         serialized = backend_app._serialize_state_payload(state)
@@ -148,6 +150,7 @@ class AppIntegrationTests(unittest.TestCase):
         self.assertTrue(serialized["rendering"]["travel_selection"])
         self.assertEqual(serialized["rendering"]["travel_options"], [])
         self.assertTrue(serialized["rendering"]["travel_options_loading"])
+        self.inline_image_patch.assert_not_called()
 
         chunk = self.client.post(
             "/world/travel-options/next",

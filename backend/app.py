@@ -23,6 +23,7 @@ try:
         build_static_asset_manifest,
     )
     from backend.npc_agent.conversation_state import ConversationState, DialogueTurn
+    from backend.npc_agent.prompts.defaults import is_travel_selection_location
     from backend.npc_agent.scenes import build_travel_options, get_initial_scene
     from backend.research import ResearchService
     from backend.world_builder import WorldBuilder, build_system_context
@@ -35,6 +36,7 @@ except ModuleNotFoundError:
     from npc_agent.agent import initialize_conversation, run_turn, start_conversation
     from npc_agent.assets import build_rendering_context, build_runtime_travel_option_rendering, build_scene_asset_spec, build_static_asset_manifest
     from npc_agent.conversation_state import ConversationState, DialogueTurn
+    from npc_agent.prompts.defaults import is_travel_selection_location
     from npc_agent.scenes import build_travel_options, get_initial_scene
     from research import ResearchService
     from world_builder import WorldBuilder, build_system_context
@@ -161,6 +163,10 @@ def _defer_travel_option_images(state: ConversationState, payload: dict) -> None
 def _inject_inline_runtime_images(state: ConversationState, payload: dict) -> None:
     if not config.enable_inline_image_data:
         return
+    rendering = payload.get("rendering") if isinstance(payload, dict) else None
+    if isinstance(rendering, dict) and rendering.get("travel_selection"):
+        return
+
 
     try:
         narrator_text = ""
@@ -267,6 +273,8 @@ def assets_manifest():
 
 def _best_effort_generate_runtime_assets(state: ConversationState) -> None:
     if not config.enable_image_generation or config.enable_inline_image_data:
+        return
+    if is_travel_selection_location(state.location):
         return
     try:
         narrator_text = ""
