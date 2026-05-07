@@ -8,7 +8,7 @@ from .npc_profile import NPCProfile
 
 @dataclass(frozen=True)
 class SceneDefinition:
-    """Static configuration for a location the player can travel to next."""
+    """Fallback static configuration for a location the player can travel to next."""
 
     location_id: str
     label: str
@@ -18,6 +18,7 @@ class SceneDefinition:
     npc_factory: Callable[[], NPCProfile]
 
 
+# Static fallback scene data used when dynamic world generation is unavailable.
 HOTEL_LOBBY_SCENE = SceneDefinition(
     location_id="hotel_lobby",
     label="Hotel Lobby",

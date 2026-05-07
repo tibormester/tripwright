@@ -107,7 +107,7 @@ p {
   margin: 0 auto;
   padding: 18px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   gap: 14px;
 }
 
@@ -154,21 +154,30 @@ p {
 }
 
 #scene-label {
-  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  font-size: clamp(1.08rem, 2vw, 1.3rem);
   line-height: 1.05;
 }
 
+#scene-description {
+  max-width: 56ch;
+  line-height: 1.35;
+}
+
+#scene-location {
+  opacity: 0.95;
+}
+
 #scene-location,
+#scene-description,
 #npc-role,
 .message-meta,
 .hint,
 .travel-intro,
-#status-text {
+.travel-progress,
+#status-text,
+.startup-copy p,
+.startup-label {
   color: var(--ink-soft);
-}
-
-#status-text {
-  display: none;
 }
 
 .current-npc {
@@ -190,7 +199,7 @@ p {
 .status-row {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 8px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -216,7 +225,8 @@ p {
 
 .secondary-button,
 #send-button,
-.travel-command {
+.travel-command,
+#startup-button {
   border: 1px solid rgba(111, 77, 46, 0.4);
   border-radius: 999px;
   padding: 11px 18px;
@@ -230,19 +240,79 @@ p {
   background: linear-gradient(180deg, rgba(239, 224, 189, 0.86), rgba(220, 192, 142, 0.82));
 }
 
-#send-button {
+#send-button,
+#startup-button {
   background: linear-gradient(180deg, #d4b074, #ba8e4b);
   color: #24170c;
   font-weight: 700;
   min-width: 96px;
-  align-self: stretch;
+}
+
+#startup-button {
+  min-width: 130px;
 }
 
 .secondary-button:hover,
 #send-button:hover,
-.travel-command:hover {
+.travel-command:hover,
+#startup-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 16px rgba(67, 41, 15, 0.14);
+}
+
+.startup-panel {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.startup-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.startup-copy h2 {
+  font-size: 1.35rem;
+}
+
+.startup-form {
+  display: grid;
+  gap: 10px;
+}
+
+.startup-label {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+#lodging-input,
+#user-input {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  padding: 14px 16px;
+  border: 1px solid rgba(241, 223, 189, 0.28);
+  border-radius: 8px;
+  background: rgba(248, 239, 217, 0.2);
+  color: var(--text-light);
+}
+
+#lodging-input::placeholder,
+#user-input::placeholder {
+  color: rgba(255, 243, 218, 0.72);
+}
+
+#lodging-input:focus,
+#user-input:focus {
+  outline: 2px solid rgba(180, 134, 77, 0.34);
+  border-color: rgba(111, 77, 46, 0.48);
+}
+
+.startup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .chat-panel {
@@ -396,10 +466,15 @@ p {
   padding: 18px 20px 20px;
 }
 
-.travel-panel-header {
+ .travel-panel-header {
   display: grid;
   gap: 6px;
   margin-bottom: 16px;
+}
+
+.travel-progress {
+  font-size: 0.95rem;
+  color: rgba(86, 60, 34, 0.92);
 }
 
 .travel-options {
@@ -452,7 +527,11 @@ p {
 }
 
 .composer[hidden],
-.travel-panel[hidden] {
+.travel-panel[hidden],
+.startup-panel[hidden],
+.chat-panel[hidden],
+.world-loading-modal[hidden],
+.travel-progress[hidden] {
   display: none !important;
 }
 
@@ -461,26 +540,6 @@ p {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   gap: 12px;
-}
-
-#user-input {
-  width: 100%;
-  min-height: 92px;
-  resize: vertical;
-  padding: 14px 16px;
-  border: 1px solid rgba(241, 223, 189, 0.28);
-  border-radius: 8px;
-  background: rgba(248, 239, 217, 0.2);
-  color: var(--text-light);
-}
-
-#user-input::placeholder {
-  color: rgba(255, 243, 218, 0.72);
-}
-
-#user-input:focus {
-  outline: 2px solid rgba(180, 134, 77, 0.34);
-  border-color: rgba(111, 77, 46, 0.48);
 }
 
 .composer-actions {
@@ -503,6 +562,37 @@ button:disabled {
 
 textarea:disabled {
   cursor: default;
+}
+
+.world-loading-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(17, 11, 7, 0.52);
+  backdrop-filter: blur(4px);
+  padding: 24px;
+}
+
+.world-loading-card {
+  width: min(640px, 100%);
+  padding: 22px 24px;
+  display: grid;
+  gap: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 233, 0.18), rgba(255, 244, 215, 0.08)),
+    rgba(241, 227, 193, 0.92);
+}
+
+.world-loading-card h2 {
+  font-size: 1.28rem;
+  color: var(--ink);
+}
+
+.world-loading-card p:last-child {
+  color: rgba(73, 53, 34, 0.86);
+  line-height: 1.55;
 }
 
 .empty-state {
@@ -532,6 +622,11 @@ textarea:disabled {
 
   .travel-options {
     grid-template-columns: 1fr;
+  }
+
+  .startup-actions {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -612,7 +707,9 @@ textarea:disabled {
   .chat-log,
   .travel-panel,
   .composer,
-  .scene-banner {
+  .scene-banner,
+  .startup-panel,
+  .world-loading-card {
     padding-left: 14px;
     padding-right: 14px;
   }

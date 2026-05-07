@@ -60,6 +60,12 @@ class ConversationState:
 
     location: str
     npc_profile: NPCProfile
+    scene_label: str = ""
+    scene_description: str = ""
+    location_id: str = ""
+    world_id: str | None = None
+    system_context: dict[str, Any] = field(default_factory=dict)
+    available_travel_options: list[dict[str, Any]] = field(default_factory=list)
     conversation_history: list[DialogueTurn] = field(default_factory=list)
     hidden_metadata: dict[str, str] = field(default_factory=dict)
 
@@ -68,6 +74,12 @@ class ConversationState:
         return {
             "location": self.location,
             "npc_profile": self.npc_profile.to_dict(),
+            "scene_label": self.scene_label,
+            "scene_description": self.scene_description,
+            "location_id": self.location_id,
+            "world_id": self.world_id,
+            "system_context": self.system_context,
+            "available_travel_options": self.available_travel_options,
             "conversation_history": [turn.to_dict() for turn in self.conversation_history],
             "hidden_metadata": self.hidden_metadata,
         }
@@ -75,9 +87,21 @@ class ConversationState:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ConversationState:
         """Rebuild conversation state from a JSON-compatible dictionary."""
+        raw_travel_options = data.get("available_travel_options", [])
+        raw_system_context = data.get("system_context", {})
         return cls(
             location=data.get("location", ""),
             npc_profile=NPCProfile.from_dict(data.get("npc_profile", {})),
+            scene_label=str(data.get("scene_label", "")),
+            scene_description=str(data.get("scene_description", "")),
+            location_id=str(data.get("location_id", "")),
+            world_id=str(data.get("world_id")) if data.get("world_id") is not None else None,
+            system_context={str(key): value for key, value in raw_system_context.items()} if isinstance(raw_system_context, dict) else {},
+            available_travel_options=[
+                {str(key): value for key, value in option.items()}
+                for option in raw_travel_options
+                if isinstance(option, dict)
+            ],
             conversation_history=[DialogueTurn.from_dict(turn) for turn in data.get("conversation_history", [])],
             hidden_metadata={
                 str(key): str(value) for key, value in data.get("hidden_metadata", {}).items()
