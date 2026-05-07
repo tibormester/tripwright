@@ -8,6 +8,7 @@ const state = {
   loadingTimer: null,
   loadingFrameIndex: 0,
   lastSceneBackgroundUrl: null,
+  lastNpcHeadshotUrl: null,
   sceneTransitionTimer: null,
   travelTransitioning: false,
   startupVisible: true,
@@ -228,7 +229,9 @@ function renderScene() {
   const scene = rendering.scene || {};
   const npc = rendering.npc || {};
   const background = scene.background || {};
-  const backgroundUrl = resolveAssetUrl(background);
+  const isTravelSelection = Boolean(rendering.travel_selection);
+  const resolvedBackgroundUrl = resolveAssetUrl(background);
+  const backgroundUrl = resolvedBackgroundUrl || (isTravelSelection ? state.lastSceneBackgroundUrl : null);
 
   elements.sceneLabel.textContent = scene.label || (state.startupVisible ? "TripWright" : "Current Scene");
   elements.sceneLocation.textContent = scene.location || (state.startupVisible
@@ -240,10 +243,14 @@ function renderScene() {
   elements.npcName.textContent = npc.name || "—";
   elements.npcRole.textContent = npc.role || "—";
 
-  if (state.lastSceneBackgroundUrl !== null && state.lastSceneBackgroundUrl !== backgroundUrl) {
+  if (!isTravelSelection && state.lastSceneBackgroundUrl !== null && state.lastSceneBackgroundUrl !== backgroundUrl) {
     triggerSceneTransition();
   }
-  state.lastSceneBackgroundUrl = backgroundUrl;
+  if (backgroundUrl) {
+    state.lastSceneBackgroundUrl = backgroundUrl;
+  } else if (!isTravelSelection) {
+    state.lastSceneBackgroundUrl = null;
+  }
 
   elements.sceneStage.style.backgroundImage = backgroundUrl
     ? `linear-gradient(rgba(66, 48, 29, 0.42), rgba(37, 25, 13, 0.62)), url('${backgroundUrl}')`
@@ -252,9 +259,17 @@ function renderScene() {
 
 function renderConversation() {
   const history = getDisplayHistory();
+  const rendering = state.conversation?.rendering || {};
   const npcName = state.conversation?.npc_profile?.name;
-  const npcHeadshot = state.conversation?.rendering?.npc?.headshot || null;
-  const npcHeadshotUrl = resolveAssetUrl(npcHeadshot);
+  const npcHeadshot = rendering.npc?.headshot || null;
+  const resolvedNpcHeadshotUrl = resolveAssetUrl(npcHeadshot);
+  const npcHeadshotUrl = resolvedNpcHeadshotUrl || (rendering.travel_selection ? state.lastNpcHeadshotUrl : null);
+
+  if (npcHeadshotUrl) {
+    state.lastNpcHeadshotUrl = npcHeadshotUrl;
+  } else if (!rendering.travel_selection) {
+    state.lastNpcHeadshotUrl = null;
+  }
 
   elements.chatLog.innerHTML = "";
 
@@ -655,6 +670,8 @@ elements.restartButton.addEventListener("click", () => {
   state.worldId = null;
   state.pendingUserTurn = null;
   state.travelTransitioning = false;
+  state.lastSceneBackgroundUrl = null;
+  state.lastNpcHeadshotUrl = null;
   state.startupVisible = true;
   state.loadedTravelOptions = [];
   state.travelOptionsProgress = null;

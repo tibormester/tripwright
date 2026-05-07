@@ -17,12 +17,12 @@ SCENE_DIR = GENERATED_ROOT / "scenes"
 NPC_DIR = GENERATED_ROOT / "npcs"
 
 SCENE_ART_STYLE = (
-    "cinematic semi-realistic digital illustration for a narrative travel adventure game, "
-    "rich environmental storytelling, polished concept-art quality, grounded lighting, no text, no UI"
+    "stylized painterly digital illustration for a narrative travel adventure game, "
+    "soft color palette, gently diffused lighting, subtly simplified forms, hand-painted concept-art feel, no text, no UI"
 )
 NPC_ART_STYLE = (
-    "stylized semi-realistic digital character portrait for a narrative travel adventure game, "
-    "clean head-and-shoulders framing, expressive natural lighting, polished concept-art quality, no text, no UI"
+    "stylized painterly digital character portrait for a narrative travel adventure game, "
+    "clean head-and-shoulders framing, soft color palette, gentle lighting, slightly simplified features, polished hand-painted concept-art feel, no text, no UI"
 )
 
 
