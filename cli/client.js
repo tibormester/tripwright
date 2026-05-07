@@ -82,23 +82,47 @@ function printNewTurns(state, previousLength = 0, options = {}) {
   }
 }
 
-async function initializeConversation() {
-  return request("POST", "/conversation/initialize", {});
+async function initializeWorld(lodgingInput) {
+  return request("POST", "/world/initialize", {
+    lodging_input: lodgingInput,
+  });
 }
 
-async function sendUserTurn(state, userInput) {
+async function sendUserTurn(state, worldId, userInput) {
   return request("POST", "/conversation/turn", {
     state,
+    world_id: worldId,
     user_input: userInput,
   });
 }
 
-async function main() {
-  console.log("TripWright NPC CLI");
-  console.log("Commands: /restart  /history  /quit  /command <1|2|3>\n");
+function askQuestion(rl, prompt) {
+  return new Promise((resolve) => rl.question(prompt, resolve));
+}
 
-  let conversationState = await initializeConversation();
-  printNewTurns(conversationState, 0);
+function printConversationEnvelope(envelope) {
+  if (!envelope || typeof envelope !== "object") {
+    console.log("(no response)");
+    return;
+  }
+
+  if (envelope.fallback_mode) {
+    console.log(`\n[system]\nUsing fallback scene data: ${envelope.fallback_reason || "unknown reason"}\n`);
+  }
+
+  const conversation = envelope.conversation || envelope;
+  if (conversation?.scene_label) {
+    console.log(`\n=== ${conversation.scene_label} ===`);
+  }
+  if (conversation?.rendering?.scene?.description) {
+    console.log(conversation.rendering.scene.description);
+  }
+  printNewTurns(conversation, 0);
+}
+
+async function main() {
+  console.log("TripWright CLI");
+  console.log("Commands: /restart  /history  /quit  /command <n>\n");
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -106,6 +130,21 @@ async function main() {
     prompt: "> ",
   });
 
+  let worldEnvelope = null;
+  let conversationState = null;
+  let worldId = null;
+  let lastLodgingInput = "";
+
+  async function startWorld(lodgingInput) {
+    lastLodgingInput = lodgingInput.trim();
+    worldEnvelope = await initializeWorld(lastLodgingInput);
+    conversationState = worldEnvelope.conversation;
+    worldId = worldEnvelope.world_id || null;
+    printConversationEnvelope(worldEnvelope);
+  }
+
+  const initialInput = await askQuestion(rl, "Enter a Booking.com URL or lodging query: ");
+  await startWorld(initialInput);
   rl.prompt();
 
   rl.on("line", async (line) => {
@@ -116,34 +155,43 @@ async function main() {
       return;
     }
 
-    if (input === "/quit") {
-      rl.close();
-      return;
+    try {
+      if (input === "/quit") {
+        rl.close();
+        return;
+      }
+
+      if (input === "/history") {
+        printNewTurns(conversationState, 0);
+        rl.prompt();
+        return;
+      }
+
+      if (input === "/restart") {
+        const nextInput = await askQuestion(rl, "Enter a Booking.com URL or lodging query: ");
+        await startWorld(nextInput || lastLodgingInput);
+        rl.prompt();
+        return;
+      }
+
+      const previousLength = Array.isArray(conversationState?.conversation_history)
+        ? conversationState.conversation_history.length
+        : 0;
+
+      conversationState = await sendUserTurn(conversationState, worldId, input);
+      const nextHistoryLength = Array.isArray(conversationState?.conversation_history)
+        ? conversationState.conversation_history.length
+        : 0;
+      const printOffset = nextHistoryLength < previousLength ? 0 : previousLength;
+
+      if (conversationState?.scene_label && printOffset === 0) {
+        console.log(`\n=== ${conversationState.scene_label} ===`);
+      }
+      printNewTurns(conversationState, printOffset, { includeUser: false });
+    } catch (error) {
+      console.error(`Error: ${error.message}`);
     }
 
-    if (input === "/history") {
-      printNewTurns(conversationState, 0);
-      rl.prompt();
-      return;
-    }
-
-    if (input === "/restart") {
-      conversationState = await initializeConversation();
-      printNewTurns(conversationState, 0);
-      rl.prompt();
-      return;
-    }
-
-    const previousLength = Array.isArray(conversationState?.conversation_history)
-      ? conversationState.conversation_history.length
-      : 0;
-
-    conversationState = await sendUserTurn(conversationState, input);
-    const nextHistoryLength = Array.isArray(conversationState?.conversation_history)
-      ? conversationState.conversation_history.length
-      : 0;
-    const printOffset = nextHistoryLength < previousLength ? 0 : previousLength;
-    printNewTurns(conversationState, printOffset, { includeUser: false });
     rl.prompt();
   });
 

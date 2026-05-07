@@ -10,6 +10,8 @@ from urllib.request import urlopen
 
 from backend.npc_agent.assets import (
     ImageAssetSpec,
+    build_npc_asset_spec,
+    build_scene_asset_spec,
     build_static_asset_specs,
     ensure_generated_directories,
 )
@@ -55,6 +57,19 @@ def parse_args() -> argparse.Namespace:
 def generate_assets(*, kind: str, force: bool, dry_run: bool, model: str, size: str) -> None:
     ensure_generated_directories()
     specs = build_static_asset_specs(kind)
+    generate_asset_specs(specs=specs, force=force, dry_run=dry_run, model=model, size=size)
+
+
+def generate_asset_specs(
+    *,
+    specs: list[ImageAssetSpec],
+    force: bool,
+    dry_run: bool,
+    model: str,
+    size: str,
+    best_effort: bool = False,
+) -> None:
+    ensure_generated_directories()
 
     if not specs:
         print("No assets found to generate.")
@@ -66,7 +81,12 @@ def generate_assets(*, kind: str, force: bool, dry_run: bool, model: str, size: 
             print(f"[{status}] {spec.kind}: {spec.label} -> {spec.output_path}")
         return
 
-    client = _build_openai_client()
+    try:
+        client = _build_openai_client()
+    except Exception:
+        if best_effort:
+            return
+        raise
 
     for spec in specs:
         if spec.output_path.is_file() and not force:
@@ -74,9 +94,37 @@ def generate_assets(*, kind: str, force: bool, dry_run: bool, model: str, size: 
             continue
 
         print(f"[generate] {spec.kind}: {spec.label}")
-        image_bytes = _generate_image_bytes(client=client, prompt=spec.prompt, model=model, size=size)
-        _write_asset_files(spec=spec, image_bytes=image_bytes, model=model, size=size)
-        print(f"[saved] {spec.output_path}")
+        try:
+            image_bytes = _generate_image_bytes(client=client, prompt=spec.prompt, model=model, size=size)
+            _write_asset_files(spec=spec, image_bytes=image_bytes, model=model, size=size)
+            print(f"[saved] {spec.output_path}")
+        except Exception:
+            if not best_effort:
+                raise
+
+
+def build_runtime_specs_for_scene(
+    *,
+    scene_label: str,
+    location: str,
+    narrator_text: str,
+    npc_profile,
+    travel_options: list[dict] | None = None,
+) -> list[ImageAssetSpec]:
+    specs = [
+        build_scene_asset_spec(location=location, narrator_text=narrator_text, label=scene_label),
+        build_npc_asset_spec(npc_profile),
+    ]
+    for option in travel_options or []:
+        specs.append(
+            build_scene_asset_spec(
+                location=str(option.get("location", option.get("label", ""))),
+                narrator_text=str(option.get("narrator_text", option.get("description", ""))),
+                label=str(option.get("label", "")),
+            )
+        )
+    unique: dict[str, ImageAssetSpec] = {f"{spec.kind}:{spec.key}": spec for spec in specs}
+    return list(unique.values())
 
 
 def _build_openai_client():

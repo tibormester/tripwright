@@ -1,5 +1,7 @@
 const state = {
   conversation: null,
+  world: null,
+  worldId: null,
   busy: false,
   error: null,
   pendingUserTurn: null,
@@ -8,6 +10,8 @@ const state = {
   lastSceneBackgroundUrl: null,
   sceneTransitionTimer: null,
   travelTransitioning: false,
+  startupVisible: true,
+  lastLodgingInput: "",
 };
 
 const SPEAKER_AVATARS = {
@@ -20,6 +24,7 @@ const SCENE_COMPLETE_PREFIX = "Scene complete. Choose where to go next";
 
 const elements = {
   sceneStage: document.getElementById("scene-stage"),
+  chatPanel: document.getElementById("chat-panel"),
   chatLog: document.getElementById("chat-log"),
   composer: document.getElementById("composer"),
   userInput: document.getElementById("user-input"),
@@ -29,12 +34,17 @@ const elements = {
   statusDot: document.getElementById("status-dot"),
   sceneLabel: document.getElementById("scene-label"),
   sceneLocation: document.getElementById("scene-location"),
+  sceneDescription: document.getElementById("scene-description"),
   npcName: document.getElementById("npc-name"),
   npcRole: document.getElementById("npc-role"),
   travelPanel: document.getElementById("travel-panel"),
   travelOptions: document.getElementById("travel-options"),
   messageTemplate: document.getElementById("message-template"),
   sceneFadeOverlay: document.getElementById("scene-fade-overlay"),
+  startupPanel: document.getElementById("startup-panel"),
+  startupForm: document.getElementById("startup-form"),
+  startupInput: document.getElementById("lodging-input"),
+  startupButton: document.getElementById("startup-button"),
 };
 
 async function apiRequest(method, path, body) {
@@ -59,20 +69,39 @@ async function apiRequest(method, path, body) {
   return payload;
 }
 
-async function initializeConversation() {
+async function initializeWorld(lodgingInput) {
+  const cleanedInput = lodgingInput.trim();
+  if (!cleanedInput) {
+    handleError(new Error("Please enter a Booking.com URL or lodging query."));
+    render();
+    return;
+  }
+
   stopLoadingIndicator();
   state.pendingUserTurn = null;
   state.travelTransitioning = false;
+  state.lastLodgingInput = cleanedInput;
   hideSceneFadeOverlay();
-  setBusy(true, "Starting conversation…");
+  setBusy(true, "Building world…");
+  render();
 
   try {
-    state.conversation = await apiRequest("POST", "/conversation/initialize", {});
+    const payload = await apiRequest("POST", "/world/initialize", {
+      lodging_input: cleanedInput,
+    });
+    state.conversation = payload.conversation || null;
+    state.world = payload.world || null;
+    state.worldId = payload.world_id || null;
+    state.startupVisible = false;
     state.error = null;
-    setBusy(false, "Connected");
+    setBusy(false, payload.cache_hit ? "Loaded cached world" : "World ready");
     render();
+    if (!elements.composer.hidden) {
+      elements.userInput.focus();
+    }
   } catch (error) {
     handleError(error);
+    render();
   }
 }
 
@@ -105,6 +134,7 @@ async function sendTurn(userInput, options = {}) {
 
     state.conversation = await apiRequest("POST", "/conversation/turn", {
       state: state.conversation,
+      world_id: state.worldId,
       user_input: cleanedInput,
     });
     state.error = null;
@@ -136,6 +166,8 @@ async function sendTurn(userInput, options = {}) {
 function setBusy(busy, statusText) {
   state.busy = busy;
   elements.restartButton.disabled = busy;
+  elements.startupButton.disabled = busy;
+  elements.startupInput.disabled = busy;
   elements.statusText.textContent = statusText;
   elements.statusDot.classList.remove("ready", "error");
 
@@ -150,6 +182,8 @@ function handleError(error) {
   state.busy = false;
   state.error = error instanceof Error ? error.message : String(error);
   elements.restartButton.disabled = false;
+  elements.startupButton.disabled = false;
+  elements.startupInput.disabled = false;
   elements.statusText.textContent = state.error;
   elements.statusDot.classList.remove("ready");
   elements.statusDot.classList.add("error");
@@ -158,9 +192,18 @@ function handleError(error) {
 
 function render() {
   renderScene();
+  renderStartup();
   renderConversation();
   renderTravelOptions();
   updateComposerState();
+}
+
+function renderStartup() {
+  elements.startupPanel.hidden = !state.startupVisible;
+  elements.chatPanel.hidden = state.startupVisible;
+  if (state.startupVisible && elements.startupInput.value !== state.lastLodgingInput) {
+    elements.startupInput.value = state.lastLodgingInput;
+  }
 }
 
 function renderScene() {
@@ -170,10 +213,15 @@ function renderScene() {
   const background = scene.background || {};
   const backgroundUrl = background.url || null;
 
-  elements.sceneLabel.textContent = scene.label || "Unknown Scene";
-  elements.sceneLocation.textContent = scene.location || "";
-  elements.npcName.textContent = npc.name || "Unknown NPC";
-  elements.npcRole.textContent = npc.role || "";
+  elements.sceneLabel.textContent = scene.label || (state.startupVisible ? "TripWright" : "Unknown Scene");
+  elements.sceneLocation.textContent = scene.location || (state.startupVisible
+    ? "Start with a Booking.com listing or lodging query to generate your arrival scene."
+    : "");
+  elements.sceneDescription.textContent = scene.description || (state.startupVisible
+    ? "Dynamic lodging setup will resolve the place, research the area, and build your first scene."
+    : "");
+  elements.npcName.textContent = npc.name || "—";
+  elements.npcRole.textContent = npc.role || "—";
 
   if (state.lastSceneBackgroundUrl !== null && state.lastSceneBackgroundUrl !== backgroundUrl) {
     triggerSceneTransition();
@@ -191,6 +239,10 @@ function renderConversation() {
   const npcHeadshotUrl = state.conversation?.rendering?.npc?.headshot?.url || null;
 
   elements.chatLog.innerHTML = "";
+
+  if (state.startupVisible) {
+    return;
+  }
 
   if (!history.length) {
     const empty = document.createElement("div");
@@ -247,7 +299,7 @@ function renderConversation() {
 function renderTravelOptions() {
   const rendering = state.conversation?.rendering || {};
   const options = Array.isArray(rendering.travel_options) ? rendering.travel_options : [];
-  const isVisible = Boolean(rendering.travel_selection && options.length);
+  const isVisible = !state.startupVisible && Boolean(rendering.travel_selection && options.length);
 
   elements.travelPanel.hidden = !isVisible;
   elements.travelOptions.innerHTML = "";
@@ -291,8 +343,8 @@ function renderTravelOptions() {
 
 function updateComposerState() {
   const travelSelection = Boolean(state.conversation?.rendering?.travel_selection);
-  const hidden = travelSelection || state.travelTransitioning;
-  const disabled = state.busy || travelSelection || state.travelTransitioning;
+  const hidden = state.startupVisible || travelSelection || state.travelTransitioning;
+  const disabled = state.busy || state.startupVisible || travelSelection || state.travelTransitioning;
 
   elements.composer.hidden = hidden;
   elements.userInput.disabled = disabled;
@@ -411,6 +463,11 @@ function stopLoadingIndicator() {
   state.loadingFrameIndex = 0;
 }
 
+elements.startupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await initializeWorld(elements.startupInput.value);
+});
+
 elements.composer.addEventListener("submit", async (event) => {
   event.preventDefault();
   const value = elements.userInput.value.trim();
@@ -433,9 +490,21 @@ elements.userInput.addEventListener("keydown", (event) => {
 });
 
 elements.restartButton.addEventListener("click", () => {
-  if (!state.busy) {
-    initializeConversation();
+  if (state.busy) {
+    return;
   }
+  stopLoadingIndicator();
+  hideSceneFadeOverlay();
+  state.conversation = null;
+  state.world = null;
+  state.worldId = null;
+  state.pendingUserTurn = null;
+  state.travelTransitioning = false;
+  state.startupVisible = true;
+  state.error = null;
+  setBusy(false, "Ready");
+  render();
+  elements.startupInput.focus();
 });
 
-initializeConversation();
+render();

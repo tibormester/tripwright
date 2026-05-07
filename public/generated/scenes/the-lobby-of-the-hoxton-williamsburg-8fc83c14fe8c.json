@@ -1,0 +1,14 @@
+{
+  "kind": "scene_background",
+  "key": "the-lobby-of-the-hoxton-williamsburg-8fc83c14fe8c",
+  "label": "The Hoxton Williamsburg",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-07T04:54:51.021308+00:00",
+  "relative_path": "generated/scenes/the-lobby-of-the-hoxton-williamsburg-8fc83c14fe8c.png",
+  "prompt": "Create a scene background image for a browser-based narrative RPG. Style: cinematic semi-realistic digital illustration for a narrative travel adventure game, rich environmental storytelling, polished concept-art quality, grounded lighting, no text, no UI. Focus on the environment and mood rather than a character portrait. If people appear, they should be small and incidental in the composition. Location: the lobby of The Hoxton Williamsburg. Narration: After the blur of transit, you arrive at The Hoxton Williamsburg with your bag still in hand. The first indoor quiet of the trip settles around you, and the place opens onto Williamsburg, where creative waterfront blocks with easy low-key stops...",
+  "source": {
+    "location": "the lobby of The Hoxton Williamsburg",
+    "narrator_text": "After the blur of transit, you arrive at The Hoxton Williamsburg with your bag still in hand. The first indoor quiet of the trip settles around you, and the place opens onto Williamsburg, where creative waterfront blocks with easy low-key stops.."
+  }
+}

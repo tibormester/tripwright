@@ -17,8 +17,9 @@
         <header class="scene-banner parchment-panel">
           <div class="scene-banner-copy">
             <p class="eyebrow">Current Scene</p>
-            <h1 id="scene-label">Loading…</h1>
-            <p id="scene-location"></p>
+            <h1 id="scene-label">TripWright</h1>
+            <p id="scene-location">Start with a hotel, inn, guesthouse, or Booking.com listing.</p>
+            <p id="scene-description"></p>
           </div>
 
           <div class="scene-banner-side">
@@ -31,14 +32,38 @@
             <div class="banner-actions">
               <section class="status-row">
                 <span class="status-dot" id="status-dot"></span>
-                <span id="status-text">Connecting…</span>
+                <span id="status-text">Ready</span>
               </section>
-              <button id="restart-button" class="secondary-button" type="button">Restart</button>
+              <button id="restart-button" class="secondary-button" type="button">New lodging</button>
             </div>
           </div>
         </header>
 
-        <section class="chat-panel parchment-panel">
+        <section class="startup-panel parchment-panel" id="startup-panel">
+          <div class="startup-copy">
+            <p class="eyebrow">Dynamic world setup</p>
+            <h2>Start from your lodging</h2>
+            <p>
+              Paste a Booking.com listing URL or enter a hotel, guesthouse, Airbnb-style rental,
+              or address. TripWright will build a local arrival scene plus three nearby destinations.
+            </p>
+          </div>
+
+          <form class="startup-form" id="startup-form">
+            <label class="startup-label" for="lodging-input">Lodging input</label>
+            <textarea
+              id="lodging-input"
+              rows="3"
+              placeholder="https://www.booking.com/hotel/... or The Hoxton Williamsburg"
+            ></textarea>
+            <div class="startup-actions">
+              <button id="startup-button" type="submit">Build world</button>
+              <span class="hint">Dynamic startup replaces the old static demo flow.</span>
+            </div>
+          </form>
+        </section>
+
+        <section class="chat-panel parchment-panel" id="chat-panel" hidden>
           <section class="chat-log" id="chat-log" aria-live="polite"></section>
         </section>
 
@@ -51,7 +76,7 @@
           <div class="travel-options" id="travel-options"></div>
         </section>
 
-        <form class="composer parchment-panel" id="composer">
+        <form class="composer parchment-panel" id="composer" hidden>
           <div class="composer-row">
             <textarea
               id="user-input"

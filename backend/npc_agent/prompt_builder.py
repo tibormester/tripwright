@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from .constants import EXIT_CONVERSATION_TAG
 from .conversation_state import ConversationState
 from .npc_profile import NPCProfile
@@ -10,6 +12,7 @@ def build_prompt(state: ConversationState) -> str:
     """Construct the full prompt for the npc by sandwiching the conversation history between a prefix and suffix prompt."""
     parts = [
         _build_prefix(state.npc_profile),
+        _build_system_scene_context(state),
         _build_runtime_context(state),
         _build_suffix(state.npc_profile),
     ]
@@ -44,20 +47,45 @@ def _build_prefix(profile: NPCProfile) -> str:
     """
 
 
+def _build_system_scene_context(state: ConversationState) -> str:
+    system_context = state.system_context or {}
+    if not system_context:
+        return ""
+
+    return f"""
+    Hidden scene and world context
+    This block is machine-side context for the NPC. Treat it as true for the current scene.
+
+    {json.dumps(system_context, indent=2, ensure_ascii=False)}
+
+    Guidance for using this context
+    - Use this context to ground specificity, local flavor, and scene-aware recommendations.
+    - Draw from the researched area summary, tone keywords, social norms, common hobbies, and selected destinations when relevant.
+    - Do not dump the research all at once.
+    - Prefer one naturally timed local detail over multiple generic facts.
+    - The narrator_text here is scene framing, not spoken dialogue. Use it to infer the traveler's likely state and what would feel natural.
+    - Selected destinations are real runtime options for this world. If recommending somewhere nearby, prefer these over invented venues.
+    """
+
+
 def _build_runtime_context(state: ConversationState) -> str:
     """Build the runtime context block from location, hidden metadata, and visible dialogue history."""
     history = "".join(str(turn) for turn in state.conversation_history)
     hidden_metadata = _format_metadata(state.hidden_metadata)
+    narrator_hint = state.system_context.get("narrator_text", "") if isinstance(state.system_context, dict) else ""
     return f"""
     Runtime context
     Current location: {state.location}
+    Scene label: {state.scene_label}
+    Scene description: {state.scene_description}
+    Narrator framing hint: {narrator_hint}
 
     Hidden metadata already known
     {hidden_metadata}
 
     Important rule: tags are one-time machine signals. Do not repeat old tags just because they already exist in hidden metadata.
     Only emit a tag if it is newly earned or newly discovered in this turn.
-    Use the narrator setup and earlier conversation as your best clues about the player's state, energy, and what kind of subtle social beat would feel natural.
+    Use the narrator setup, hidden world context, and earlier conversation as your best clues about the player's state, energy, and what kind of subtle social beat would feel natural.
 
     Conversation so far
     {history}

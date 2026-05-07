@@ -1,183 +1,183 @@
 # Dynamic Lodging World Implementation Checklist
 
 ## Phase 0 - Setup and dependency decisions
-- [ ] Confirm v1 input contract: `lodging_input` accepts Booking URL or fallback text
-- [ ] Decide whether dynamic mode should fully replace startup in the UI or exist beside static mode initially
-- [ ] Add/confirm Python dependencies:
-  - [ ] `requests`
-  - [ ] `beautifulsoup4`
+- [x] Confirm v1 input contract: `lodging_input` accepts Booking URL or fallback text
+- [x] Decide whether dynamic mode should fully replace startup in the UI or exist beside static mode initially
+- [x] Add/confirm Python dependencies:
+  - [x] `requests`
+  - [x] `beautifulsoup4`
   - [ ] optional `extruct`
   - [ ] optional DuckDuckGo search library
-- [ ] Create a `data/` directory convention for file-backed world persistence
-- [ ] Add config env vars for timeouts, store mode, and provider toggles
+- [x] Create a `data/` directory convention for file-backed world persistence
+- [x] Add config env vars for timeouts, store mode, and provider toggles
 
 ## Phase 1 - New runtime models
 ### Files
-- [ ] Create `backend/location/models.py`
-- [ ] Create `backend/research/models.py`
-- [ ] Create `backend/world_state.py`
+- [x] Create `backend/location/models.py`
+- [x] Create `backend/research/models.py`
+- [x] Create `backend/world_state.py`
 
 ### Tasks
-- [ ] Add `LocationContext` dataclass
-- [ ] Add `ResearchReport` dataclass
-- [ ] Add `RuntimeSceneDefinition` dataclass
-- [ ] Add `WorldState` dataclass
-- [ ] Add `to_dict()` / `from_dict()` helpers for all runtime models
-- [ ] Add optional cache maps for generated scenes/NPCs in `WorldState`
+- [x] Add `LocationContext` dataclass
+- [x] Add `ResearchReport` dataclass
+- [x] Add `RuntimeSceneDefinition` dataclass
+- [x] Add `WorldState` dataclass
+- [x] Add `to_dict()` / `from_dict()` helpers for all runtime models
+- [x] Add optional cache maps for generated scenes/NPCs in `WorldState`
 
 ## Phase 2 - Persistence abstraction
 ### Files
-- [ ] Create `backend/world_store.py`
+- [x] Create `backend/world_store.py`
 
 ### Tasks
-- [ ] Define a store interface with methods like:
-  - [ ] `get_world(world_id)`
-  - [ ] `save_world(world_state)`
-  - [ ] `find_world_id_by_fingerprint(fingerprint)`
-  - [ ] `save_fingerprint_mapping(fingerprint, world_id)`
-- [ ] Implement `MemoryWorldStore`
-- [ ] Implement `FileWorldStore`
-- [ ] Add file layout:
-  - [ ] `data/world_index.json`
-  - [ ] `data/worlds/<world_id>/world.json`
-- [ ] Add canonical fingerprint builder for resolved lodging
-- [ ] Add world id generator
+- [x] Define a store interface with methods like:
+  - [x] `get_world(world_id)`
+  - [x] `save_world(world_state)`
+  - [x] `find_world_id_by_fingerprint(fingerprint)`
+  - [x] `save_fingerprint_mapping(fingerprint, world_id)`
+- [x] Implement `MemoryWorldStore`
+- [x] Implement `FileWorldStore`
+- [x] Add file layout:
+  - [x] `data/world_index.json`
+  - [x] `data/worlds/<world_id>/world.json`
+- [x] Add canonical fingerprint builder for resolved lodging
+- [x] Add world id generator
 
 ## Phase 3 - Lodging input resolution
 ### Files
-- [ ] Create `backend/location/booking_parser.py`
-- [ ] Create `backend/location/providers.py`
-- [ ] Create `backend/location/service.py`
+- [x] Create `backend/location/booking_parser.py`
+- [x] Create `backend/location/providers.py`
+- [x] Create `backend/location/service.py`
 
 ### Tasks
-- [ ] Add URL detection helper
-- [ ] Add Booking.com hostname detection helper
-- [ ] Implement best-effort Booking page fetch using `requests`
-- [ ] Parse useful fields from Booking HTML:
-  - [ ] lodging name
-  - [ ] address
-  - [ ] coordinates if present
-  - [ ] city/neighborhood hints
-  - [ ] canonical URL
-- [ ] Add fallback resolution using Nominatim / OSM geocoding
-- [ ] Infer lodging type:
-  - [ ] hotel
-  - [ ] inn / guesthouse
-  - [ ] apartment / airbnb-like rental
-  - [ ] unknown lodging fallback
-- [ ] Build canonical `LocationContext`
-- [ ] Add confidence scoring / incomplete-data fallback behavior
+- [x] Add URL detection helper
+- [x] Add Booking.com hostname detection helper
+- [x] Implement best-effort Booking page fetch using `requests`
+- [x] Parse useful fields from Booking HTML:
+  - [x] lodging name
+  - [x] address
+  - [x] coordinates if present
+  - [x] city/neighborhood hints
+  - [x] canonical URL
+- [x] Add fallback resolution using Nominatim / OSM geocoding
+- [x] Infer lodging type:
+  - [x] hotel
+  - [x] inn / guesthouse
+  - [x] apartment / airbnb-like rental
+  - [x] unknown lodging fallback
+- [x] Build canonical `LocationContext`
+- [x] Add confidence scoring / incomplete-data fallback behavior
 
 ## Phase 4 - Nearby destination lookup
 ### Files
-- [ ] Extend `backend/location/providers.py`
-- [ ] Create `backend/location/destination_selector.py`
+- [x] Extend `backend/location/providers.py`
+- [x] Create `backend/location/destination_selector.py`
 
 ### Tasks
-- [ ] Query Overpass/OSM around lodging coordinates
-- [ ] Collect candidates for:
-  - [ ] cafe / coffee shop
-  - [ ] bookstore / books / reading-oriented spots
-  - [ ] park / promenade / plaza / waterfront / square
-- [ ] Normalize candidate place objects
-- [ ] Rank candidates by distance + metadata quality
-- [ ] Apply category fallback rules
-- [ ] Select exactly 3 destinations
-- [ ] Produce stable `location_id` values
+- [x] Query Overpass/OSM around lodging coordinates
+- [x] Collect candidates for:
+  - [x] cafe / coffee shop
+  - [x] bookstore / books / reading-oriented spots
+  - [x] park / promenade / plaza / waterfront / square
+- [x] Normalize candidate place objects
+- [x] Rank candidates by distance + metadata quality
+- [x] Apply category fallback rules
+- [x] Select exactly 3 destinations
+- [x] Produce stable `location_id` values
 
 ## Phase 5 - Research pipeline
 ### Files
-- [ ] Create `backend/research/prompts.py`
-- [ ] Create `backend/research/service.py`
-- [ ] Optional: create `backend/research/search_provider.py`
+- [x] Create `backend/research/prompts.py`
+- [x] Create `backend/research/service.py`
+- [x] Optional: create `backend/research/search_provider.py`
 
 ### Tasks
-- [ ] Implement fixed-query research pipeline
-- [ ] Generate area-level research queries from city/neighborhood
-- [ ] Fetch public search snippets if provider/library is available
-- [ ] Summarize into `ResearchReport`
-- [ ] Keep outputs soft and non-overclaiming
-- [ ] Store source snippets/URLs where possible
-- [ ] Add fallback behavior when search is unavailable
+- [x] Implement fixed-query research pipeline
+- [x] Generate area-level research queries from city/neighborhood
+- [x] Fetch public search snippets if provider/library is available
+- [x] Summarize into `ResearchReport`
+- [x] Keep outputs soft and non-overclaiming
+- [x] Store source snippets/URLs where possible
+- [x] Add fallback behavior when search is unavailable
 
 ## Phase 6 - Runtime NPC and scene builders
 ### Files
-- [ ] Create `backend/npc_agent/runtime_profiles.py`
-- [ ] Create `backend/world_builder.py`
+- [x] Create `backend/npc_agent/runtime_profiles.py`
+- [x] Create `backend/world_builder.py`
 
 ### Tasks
-- [ ] Build a lodging-staff role selector based on lodging type
-- [ ] Generate dynamic lodging NPC profile data
-- [ ] Generate dynamic lodging narrator intro text
-- [ ] Generate runtime lodging scene definition
-- [ ] Generate destination scene seeds
-- [ ] Generate destination NPC seeds for lazy creation
-- [ ] Preserve the current overt/subtle goal structure style
-- [ ] Ensure generated recommendations reference the selected 3 destinations
+- [x] Build a lodging-staff role selector based on lodging type
+- [x] Generate dynamic lodging NPC profile data
+- [x] Generate dynamic lodging narrator intro text
+- [x] Generate runtime lodging scene definition
+- [x] Generate destination scene seeds
+- [x] Generate destination NPC seeds for lazy creation
+- [x] Preserve the current overt/subtle goal structure style
+- [x] Ensure generated recommendations reference the selected 3 destinations
 
 ## Phase 7 - World-aware conversation integration
 ### Files to modify
-- [ ] `backend/app.py`
-- [ ] `backend/npc_agent/agent.py`
-- [ ] `backend/npc_agent/assets.py`
+- [x] `backend/app.py`
+- [x] `backend/npc_agent/agent.py`
+- [x] `backend/npc_agent/assets.py`
 - [ ] `backend/npc_agent/scenes.py` or replace its static responsibility
-- [ ] `backend/npc_agent/conversation_state.py` if world linkage is needed
+- [x] `backend/npc_agent/conversation_state.py` if world linkage is needed
 
 ### Tasks
-- [ ] Add `POST /world/initialize`
-- [ ] Return `world_id`, `world`, and initialized `conversation`
-- [ ] Extend `POST /conversation/turn` to accept `world_id`
-- [ ] Load `WorldState` inside travel transitions
-- [ ] Replace static travel destination lookup with runtime world lookup
-- [ ] Lazy-generate destination scene and NPC when `/command N` is chosen
-- [ ] Cache generated destination scene/NPC back into the world store
-- [ ] Keep static `/conversation/initialize` available as fallback during migration
+- [x] Add `POST /world/initialize`
+- [x] Return `world_id`, `world`, and initialized `conversation`
+- [x] Extend `POST /conversation/turn` to accept `world_id`
+- [x] Load `WorldState` inside travel transitions
+- [x] Replace static travel destination lookup with runtime world lookup
+- [x] Lazy-generate destination scene and NPC when `/command N` is chosen
+- [x] Cache generated destination scene/NPC back into the world store
+- [x] Keep static `/conversation/initialize` available as fallback during migration
 
 ## Phase 8 - Rendering and assets
 ### Files to modify
-- [ ] `backend/npc_agent/assets.py`
+- [x] `backend/npc_agent/assets.py`
 - [ ] `backend/generate_assets.py` if needed
 
 ### Tasks
-- [ ] Make rendering context consume runtime travel scenes
-- [ ] Make scene labels and descriptions come from `WorldState`
-- [ ] Make NPC headshot generation support runtime-generated NPC profiles
-- [ ] Keep image generation optional for dynamic worlds in v1
-- [ ] Ensure asset keys are stable for cached runtime content
+- [x] Make rendering context consume runtime travel scenes
+- [x] Make scene labels and descriptions come from `WorldState`
+- [x] Make NPC headshot generation support runtime-generated NPC profiles
+- [x] Keep image generation optional for dynamic worlds in v1
+- [x] Ensure asset keys are stable for cached runtime content
 
 ## Phase 9 - Frontend integration
 ### Files to modify
-- [ ] `public/app.js`
-- [ ] `public/index.html`
-- [ ] `public/styles.css`
+- [x] `public/app.js`
+- [x] `public/index.html`
+- [x] `public/styles.css`
 - [ ] optional CLI updates in `cli/client.js`
 
 ### Tasks
-- [ ] Add startup form for lodging input
-- [ ] Support Booking URL paste flow
-- [ ] Add startup loading state
-- [ ] Store `world_id` client-side alongside conversation state
-- [ ] Send `world_id` with turn requests
-- [ ] Keep travel option rendering working with runtime options
-- [ ] Update restart behavior for dynamic worlds
+- [x] Add startup form for lodging input
+- [x] Support Booking URL paste flow
+- [x] Add startup loading state
+- [x] Store `world_id` client-side alongside conversation state
+- [x] Send `world_id` with turn requests
+- [x] Keep travel option rendering working with runtime options
+- [x] Update restart behavior for dynamic worlds
 - [ ] Optionally keep a “start static demo” button during migration
 
 ## Phase 10 - Error handling and fallback behavior
-- [ ] Add request timeouts for HTML fetch, geocoding, Overpass, and search
-- [ ] Add retry logic for transient failures
-- [ ] If Booking extraction fails, fallback to text-based location resolution
-- [ ] If geocoding fails, return a clear validation error to the client
-- [ ] If research fails, continue with generic-but-plausible local flavor
-- [ ] If nearby place lookup is weak, use broader category fallbacks
+- [x] Add request timeouts for HTML fetch, geocoding, Overpass, and search
+- [x] Add retry logic for transient failures
+- [x] If Booking extraction fails, fallback to text-based location resolution
+- [x] If geocoding fails, return a clear validation error to the client
+- [x] If research fails, continue with generic-but-plausible local flavor
+- [x] If nearby place lookup is weak, use broader category fallbacks
 - [ ] If dynamic world generation fails entirely, optionally fallback to current static flow
 
 ## Phase 11 - Logging and observability
-- [ ] Log world creation start/end with `world_id`
-- [ ] Log lodging resolution source and confidence
-- [ ] Log selected destinations
-- [ ] Log research timings and failures
-- [ ] Log lazy destination generation events
-- [ ] Log cache hits for repeated lodging inputs
+- [x] Log world creation start/end with `world_id`
+- [x] Log lodging resolution source and confidence
+- [x] Log selected destinations
+- [x] Log research timings and failures
+- [x] Log lazy destination generation events
+- [x] Log cache hits for repeated lodging inputs
 
 ## Phase 12 - Testing
 ### Unit tests
@@ -197,15 +197,15 @@
 - [ ] revisit destination uses cached generated content
 
 ## Suggested implementation order
-- [ ] 1. Runtime models
-- [ ] 2. World store
-- [ ] 3. Lodging resolution
-- [ ] 4. Nearby destination lookup
-- [ ] 5. Research pipeline
-- [ ] 6. World builder
-- [ ] 7. New endpoint
-- [ ] 8. Turn/travel refactor
-- [ ] 9. Frontend startup flow
+- [x] 1. Runtime models
+- [x] 2. World store
+- [x] 3. Lodging resolution
+- [x] 4. Nearby destination lookup
+- [x] 5. Research pipeline
+- [x] 6. World builder
+- [x] 7. New endpoint
+- [x] 8. Turn/travel refactor
+- [x] 9. Frontend startup flow
 - [ ] 10. Hardening/tests
 
 ## Nice-to-have after v1

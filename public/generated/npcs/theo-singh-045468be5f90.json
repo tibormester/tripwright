@@ -1,0 +1,18 @@
+{
+  "kind": "npc_headshot",
+  "key": "theo-singh-045468be5f90",
+  "label": "Theo Singh",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "generated_at": "2026-05-07T04:56:33.823534+00:00",
+  "relative_path": "generated/npcs/theo-singh-045468be5f90.png",
+  "prompt": "Create an NPC portrait for a browser-based narrative RPG. Style: stylized semi-realistic digital character portrait for a narrative travel adventure game, clean head-and-shoulders framing, expressive natural lighting, polished concept-art quality, no text, no UI. Single character only, framed from the shoulders up, with a neutral background or softly implied setting. Name: Theo Singh. Role: Front Desk Host. Physical description: Theo looks put together in a way that suits the property: attentive eyes, unhurried posture, and the kind of expression that makes a front-desk interaction feel less transactional.. Mental vibe: They think in terms of reducing friction for a guest: what needs clarifying, what can wait, and what small nearby recommendation would make the arrival feel easier.. Emotional vibe: They come across as steady, observant, and lightly reassuring, especially with travelers who look tired, early, or slightly disoriented.. Setting flavor: Their sense of local flavor is practical rather than performative. The surrounding area reads as creative, walkable, waterfront. If the moment allows, they can naturally point the traveler toward places like Daybreak Cafe, Williamsburg Brooklyn Reading Room, Riverfront Square..",
+  "source": {
+    "name": "Theo Singh",
+    "role": "Front Desk Host",
+    "physical_description": "Theo looks put together in a way that suits the property: attentive eyes, unhurried posture, and the kind of expression that makes a front-desk interaction feel less transactional.",
+    "mental_description": "They think in terms of reducing friction for a guest: what needs clarifying, what can wait, and what small nearby recommendation would make the arrival feel easier.",
+    "emotional_description": "They come across as steady, observant, and lightly reassuring, especially with travelers who look tired, early, or slightly disoriented.",
+    "local_flavor": "Their sense of local flavor is practical rather than performative. The surrounding area reads as creative, walkable, waterfront. If the moment allows, they can naturally point the traveler toward places like Daybreak Cafe, Williamsburg Brooklyn Reading Room, Riverfront Square."
+  }
+}

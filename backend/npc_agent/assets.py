@@ -167,10 +167,10 @@ def build_static_asset_manifest() -> dict[str, Any]:
 
 def build_rendering_context(state: ConversationState) -> dict[str, Any]:
     base_location = _strip_travel_selection_suffix(state.location)
-    narrator_text = _find_first_turn_dialogue(state.conversation_history, speaker="Narrator")
+    narrator_text = _find_first_turn_dialogue(state.conversation_history, speaker="Narrator") or _extract_narrator_text(state)
     matched_scene = _find_scene_by_location(base_location)
 
-    scene_label = matched_scene.label if matched_scene else _humanize_location(base_location)
+    scene_label = state.scene_label or (matched_scene.label if matched_scene else _humanize_location(base_location))
     scene_spec = build_scene_asset_spec(
         location=base_location,
         narrator_text=narrator_text or (matched_scene.narrator_text if matched_scene else ""),
@@ -182,6 +182,7 @@ def build_rendering_context(state: ConversationState) -> dict[str, Any]:
         "scene": {
             "label": scene_label,
             "location": base_location,
+            "description": state.scene_description,
             "background": _describe_runtime_asset(scene_spec),
         },
         "npc": {
@@ -190,8 +191,33 @@ def build_rendering_context(state: ConversationState) -> dict[str, Any]:
             "headshot": _describe_runtime_asset(npc_spec),
         },
         "travel_selection": is_travel_selection_location(state.location),
-        "travel_options": [_build_travel_option_rendering(scene) for scene in TRAVEL_DESTINATIONS],
+        "travel_options": _build_runtime_travel_options(state.available_travel_options),
     }
+
+
+def _build_runtime_travel_options(options: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if options:
+        rendered_options = []
+        for index, option in enumerate(options, start=1):
+            location = str(option.get("location", option.get("label", "")))
+            narrator_text = str(option.get("narrator_text", option.get("description", "")))
+            scene_spec = build_scene_asset_spec(
+                location=location,
+                narrator_text=narrator_text,
+                label=str(option.get("label", "")),
+            )
+            rendered_options.append(
+                {
+                    "location_id": str(option.get("location_id", "")),
+                    "label": str(option.get("label", "Unknown destination")),
+                    "description": str(option.get("description", "")),
+                    "command": f"/command {index}",
+                    "background": _describe_runtime_asset(scene_spec),
+                }
+            )
+        return rendered_options
+
+    return [_build_travel_option_rendering(scene) for scene in TRAVEL_DESTINATIONS]
 
 
 def _build_travel_option_rendering(scene: SceneDefinition) -> dict[str, Any]:
@@ -254,6 +280,15 @@ def _find_scene_by_location(location: str) -> SceneDefinition | None:
         if scene.location == normalized_location:
             return scene
     return None
+
+
+def _extract_narrator_text(state: ConversationState) -> str | None:
+    system_context = state.system_context if isinstance(state.system_context, dict) else {}
+    narrator_text = system_context.get("narrator_text")
+    if narrator_text is None:
+        return None
+    text = str(narrator_text).strip()
+    return text or None
 
 
 def _find_first_turn_dialogue(turns: list[DialogueTurn], *, speaker: str) -> str | None:

@@ -15,6 +15,13 @@ from .prompts.defaults import (
 )
 from .scenes import SceneDefinition, build_travel_options, get_destination_by_choice
 
+try:
+    from backend.world_builder import build_conversation_state_from_scene
+    from backend.world_state import RuntimeSceneDefinition, WorldState
+except ModuleNotFoundError:
+    from world_builder import build_conversation_state_from_scene
+    from world_state import RuntimeSceneDefinition, WorldState
+
 
 TRAVEL_OPTIONS = build_travel_options()
 
@@ -23,12 +30,30 @@ def initialize_conversation(
     npc_profile: NPCProfile,
     location: str,
     narrator_text: str | None = None,
+    *,
+    scene_label: str = "",
+    scene_description: str = "",
+    location_id: str = "",
+    world_id: str | None = None,
+    system_context: dict | None = None,
+    available_travel_options: list[dict] | None = None,
 ) -> ConversationState:
-    """Set up the initial conversation state with the NPC profile and opening narration."""
-    state = ConversationState(location=location, npc_profile=npc_profile)
+    """Set up the initial conversation state with the NPC profile and hidden scene framing."""
     intro = (narrator_text or build_default_scene_intro(location)).strip()
-    if intro:
-        _append_turn(state, speaker="Narrator", dialogue=intro)
+    merged_system_context = dict(system_context or {})
+    if intro and not merged_system_context.get("narrator_text"):
+        merged_system_context["narrator_text"] = intro
+
+    state = ConversationState(
+        location=location,
+        npc_profile=npc_profile,
+        scene_label=scene_label,
+        scene_description=scene_description,
+        location_id=location_id,
+        world_id=world_id,
+        system_context=merged_system_context,
+        available_travel_options=list(available_travel_options or []),
+    )
     return state
 
 
@@ -38,12 +63,18 @@ def start_conversation(state: ConversationState) -> ConversationState:
     return state
 
 
-def run_turn(state: ConversationState, user_input: str) -> ConversationState:
+def run_turn(
+    state: ConversationState,
+    user_input: str,
+    *,
+    world_state: WorldState | None = None,
+    world_builder=None,
+) -> ConversationState:
     """Process one user input, update state, and return the updated conversation."""
     cleaned_input = user_input.strip()
 
     if is_travel_selection_location(state.location):
-        return _handle_travel_command(state, cleaned_input)
+        return _handle_travel_command(state, cleaned_input, world_state=world_state, world_builder=world_builder)
 
     if cleaned_input:
         _append_turn(state, speaker="User", dialogue=cleaned_input)
@@ -68,25 +99,47 @@ def _append_npc_turn(state: ConversationState) -> None:
         _finish_conversation(state)
 
 
-def _handle_travel_command(state: ConversationState, command_input: str) -> ConversationState:
+def _handle_travel_command(
+    state: ConversationState,
+    command_input: str,
+    *,
+    world_state: WorldState | None,
+    world_builder,
+) -> ConversationState:
     """Accept only numbered /command input while waiting for the next scene selection."""
     _append_turn(state, speaker="User", dialogue=command_input)
 
-    choice_index, error_message = _parse_travel_command(command_input)
+    options = state.available_travel_options or TRAVEL_OPTIONS
+    choice_index, error_message = _parse_travel_command(command_input, option_count=len(options))
     if error_message:
         _append_system_turn(state, error_message)
         return state
 
+    selected_option = options[choice_index] if 0 <= choice_index < len(options) else None
+    if selected_option is None:
+        _append_system_turn(state, f"That destination does not exist. {build_travel_command_usage(len(options))}")
+        return state
+
+    if world_state is not None and world_builder is not None and state.world_id:
+        scene = world_builder.ensure_destination_generated(world_state, str(selected_option.get("location_id", "")))
+        next_state = build_conversation_state_from_scene(
+            scene,
+            world_id=world_state.world_id,
+            travel_scenes=world_state.travel_scenes,
+            world_state=world_state,
+        )
+        return start_conversation(next_state)
+
     destination = get_destination_by_choice(choice_index)
     if destination is None:
-        _append_system_turn(state, f"That destination does not exist. {build_travel_command_usage(len(TRAVEL_OPTIONS))}")
+        _append_system_turn(state, f"That destination does not exist. {build_travel_command_usage(len(options))}")
         return state
 
     return _start_scene(destination)
 
 
-def _parse_travel_command(command_input: str) -> tuple[int | None, str | None]:
-    usage = build_travel_command_usage(len(TRAVEL_OPTIONS))
+def _parse_travel_command(command_input: str, option_count: int) -> tuple[int | None, str | None]:
+    usage = build_travel_command_usage(option_count)
 
     if not command_input.startswith("/command"):
         return None, f"A location choice is required right now. {usage}"
@@ -100,7 +153,7 @@ def _parse_travel_command(command_input: str) -> tuple[int | None, str | None]:
         return None, f"Invalid destination number. {usage}"
 
     choice_index = int(choice_text) - 1
-    if get_destination_by_choice(choice_index) is None:
+    if choice_index < 0 or choice_index >= option_count:
         return None, f"That destination does not exist. {usage}"
 
     return choice_index, None
@@ -114,7 +167,8 @@ def _finish_conversation(state: ConversationState) -> None:
     state.npc_profile.overt_goals.clear()
     state.npc_profile.subtle_goals.clear()
     state.location = mark_travel_selection_location(state.location)
-    _append_turn(state, speaker="System", dialogue=build_travel_selection_message(TRAVEL_OPTIONS))
+    options = state.available_travel_options or TRAVEL_OPTIONS
+    _append_turn(state, speaker="System", dialogue=build_travel_selection_message(options))
 
 
 def _append_turn(state: ConversationState, *, speaker: str, dialogue: str) -> None:
@@ -130,6 +184,10 @@ def _start_scene(scene: SceneDefinition) -> ConversationState:
         npc_profile=scene.npc_factory(),
         location=scene.location,
         narrator_text=scene.narrator_text,
+        scene_label=scene.label,
+        scene_description=scene.description,
+        location_id=scene.location_id,
+        available_travel_options=TRAVEL_OPTIONS,
     )
     return start_conversation(next_state)
 
