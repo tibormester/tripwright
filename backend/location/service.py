@@ -49,9 +49,9 @@ class LodgingResolutionService:
         if input_kind == "booking_url" and self.config.booking_fetch_enabled:
             booking_metadata = self._try_parse_booking_page(cleaned_input)
 
-        geocode_query = self._build_geocode_query(cleaned_input, booking_metadata)
+        geocode_queries = self._build_geocode_queries(cleaned_input, booking_metadata)
         if self.config.geocoding_enabled:
-            geocoded_place = self.nominatim_provider.geocode(geocode_query)
+            geocoded_place = self._try_geocode_queries(geocode_queries)
 
         location_context = self._build_location_context(
             lodging_input=cleaned_input,
@@ -108,18 +108,49 @@ class LodgingResolutionService:
             logger.warning("booking parse failed | url=%s | error=%s", url, exc)
             return None
 
-    def _build_geocode_query(self, lodging_input: str, booking_metadata: BookingPageMetadata | None) -> str:
+    def _build_geocode_queries(self, lodging_input: str, booking_metadata: BookingPageMetadata | None) -> list[str]:
+        candidates: list[str] = []
+
         if booking_metadata:
-            query = booking_metadata.build_query().strip()
-            if query:
-                return query
+            candidates.extend(
+                [
+                    booking_metadata.build_query(),
+                    _join_non_empty(booking_metadata.name, booking_metadata.city, booking_metadata.country),
+                    _join_non_empty(booking_metadata.name, booking_metadata.address),
+                    booking_metadata.address,
+                ]
+            )
 
         if is_probable_url(lodging_input):
             extracted_query = extract_lodging_query_from_url(lodging_input)
             if extracted_query:
-                return extracted_query
+                candidates.append(extracted_query)
+        else:
+            candidates.extend(_build_text_query_variants(lodging_input))
 
-        return lodging_input
+        candidates.append(lodging_input)
+        return _dedupe_non_empty(candidates)
+
+    def _try_geocode_queries(self, queries: list[str]) -> NominatimPlace | None:
+        for index, query in enumerate(queries, start=1):
+            try:
+                logger.info("geocode candidate | attempt=%s | query=%s", index, query)
+                place = self.nominatim_provider.geocode(query)
+            except Exception as exc:
+                logger.warning("geocode candidate failed | attempt=%s | query=%s | error=%s", index, query, exc)
+                continue
+            if place is None:
+                continue
+            logger.info(
+                "geocode candidate matched | attempt=%s | query=%s | display_name=%s | coords=%s,%s",
+                index,
+                query,
+                place.display_name,
+                place.latitude,
+                place.longitude,
+            )
+            return place
+        return None
 
     def _build_location_context(
         self,
@@ -214,6 +245,41 @@ class LodgingResolutionService:
         if geocoded_place and geocoded_place.country:
             score += 0.05
         return min(score, 0.95)
+
+
+def _build_text_query_variants(value: str) -> list[str]:
+    cleaned = " ".join((value or "").replace("\n", " ").split()).strip()
+    if not cleaned:
+        return []
+
+    variants = [cleaned]
+    if "," in cleaned:
+        parts = [part.strip() for part in cleaned.split(",") if part.strip()]
+        if len(parts) >= 2:
+            variants.append(", ".join(parts[:2]))
+            variants.append(", ".join(parts[-2:]))
+    if "|" in cleaned:
+        variants.extend(part.strip() for part in cleaned.split("|") if part.strip())
+    return _dedupe_non_empty(variants)
+
+
+def _join_non_empty(*parts: str) -> str:
+    return ", ".join(part.strip() for part in parts if part and part.strip())
+
+
+def _dedupe_non_empty(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    output: list[str] = []
+    for value in values:
+        cleaned = value.strip()
+        if not cleaned:
+            continue
+        key = cleaned.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        output.append(cleaned)
+    return output
 
 
 def _build_provider_place_id(place: NominatimPlace | None) -> str:

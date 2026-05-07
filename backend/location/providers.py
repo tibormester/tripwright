@@ -65,7 +65,7 @@ class NominatimProvider:
                     params={
                         "q": cleaned_query,
                         "format": "jsonv2",
-                        "limit": 1,
+                        "limit": 5,
                         "addressdetails": 1,
                     },
                 )
@@ -86,17 +86,22 @@ class NominatimProvider:
         if not isinstance(payload, list) or not payload:
             return None
 
-        item = payload[0]
-        if not isinstance(item, dict):
+        ranked_items = [item for item in payload if isinstance(item, dict)]
+        if not ranked_items:
             return None
 
+        item = _pick_best_nominatim_item(ranked_items)
         address = item.get("address") if isinstance(item.get("address"), dict) else {}
         place_name = _extract_place_name(item, address)
+        latitude = _to_float(item.get("lat"))
+        longitude = _to_float(item.get("lon"))
+        if latitude is None or longitude is None:
+            latitude, longitude = _bounding_box_center(item.get("boundingbox"))
 
         return NominatimPlace(
             display_name=str(item.get("display_name", "")),
-            latitude=_to_float(item.get("lat")),
-            longitude=_to_float(item.get("lon")),
+            latitude=latitude,
+            longitude=longitude,
             name=place_name,
             city=_first_non_empty(address.get("city"), address.get("town"), address.get("village"), address.get("municipality")),
             neighborhood=_first_non_empty(
@@ -250,6 +255,18 @@ def _build_display_address(tags: dict[str, Any]) -> str:
     return ", ".join(parts)
 
 
+def _pick_best_nominatim_item(items: list[dict[str, Any]]) -> dict[str, Any]:
+    return sorted(items, key=_nominatim_item_score)[0]
+
+
+def _nominatim_item_score(item: dict[str, Any]) -> tuple[int, int, int]:
+    has_coords = 0 if (_to_float(item.get("lat")) is not None and _to_float(item.get("lon")) is not None) else 1
+    address = item.get("address") if isinstance(item.get("address"), dict) else {}
+    address_richness = -sum(1 for key in ("road", "house_number", "city", "state", "country") if address.get(key))
+    has_name = 0 if _extract_place_name(item, address) else 1
+    return (has_coords, has_name, address_richness)
+
+
 def _extract_place_name(item: dict[str, Any], address: dict[str, Any]) -> str:
     return _first_non_empty(
         item.get("name"),
@@ -267,6 +284,18 @@ def _first_non_empty(*values: Any) -> str:
         if text:
             return text
     return ""
+
+
+def _bounding_box_center(value: Any) -> tuple[float | None, float | None]:
+    if not isinstance(value, list) or len(value) != 4:
+        return None, None
+    south = _to_float(value[0])
+    north = _to_float(value[1])
+    west = _to_float(value[2])
+    east = _to_float(value[3])
+    if south is None or north is None or west is None or east is None:
+        return None, None
+    return (south + north) / 2.0, (west + east) / 2.0
 
 
 def _to_float(value: Any) -> float | None:

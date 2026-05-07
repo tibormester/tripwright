@@ -150,6 +150,8 @@ def _inject_inline_runtime_images(state: ConversationState, payload: dict) -> No
             narrator_text=narrator_text,
             npc_profile=state.npc_profile,
             travel_options=None,
+            scene_description=state.scene_description,
+            system_context=state.system_context,
         )
         missing_specs = [spec for spec in specs if f"{spec.kind}:{spec.key}" not in inline_image_cache]
         if missing_specs:
@@ -218,6 +220,8 @@ def _best_effort_generate_runtime_assets(state: ConversationState) -> None:
             narrator_text=narrator_text,
             npc_profile=state.npc_profile,
             travel_options=state.available_travel_options,
+            scene_description=state.scene_description,
+            system_context=state.system_context,
         )
         generate_asset_specs(
             specs=specs,

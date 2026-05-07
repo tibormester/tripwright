@@ -39,6 +39,7 @@ BOOKING_HTML = """
 class FakeNominatimProvider:
     def geocode(self, query: str) -> NominatimPlace | None:
         self.last_query = query
+        self.queries = getattr(self, "queries", []) + [query]
         return NominatimPlace(
             display_name="The Hoxton Williamsburg, 97 Wythe Ave, Brooklyn, New York, United States",
             latitude=40.7216,
@@ -112,6 +113,55 @@ class BookingAndResolutionTests(unittest.TestCase):
 
         self.assertEqual(provider.last_query, "the hoxton williamsburg")
         self.assertEqual(result.location_context.canonical_name, "The Hoxton Williamsburg")
+
+
+class QueryVariantProvider:
+    def __init__(self) -> None:
+        self.queries: list[str] = []
+
+    def geocode(self, query: str) -> NominatimPlace | None:
+        self.queries.append(query)
+        if query == "97 Wythe Ave, Brooklyn":
+            return NominatimPlace(
+                display_name="97 Wythe Ave, Brooklyn, New York, United States",
+                latitude=40.7216,
+                longitude=-73.9582,
+                name="97 Wythe Ave",
+                city="Brooklyn",
+                neighborhood="Williamsburg",
+                region="New York",
+                country="United States",
+                osm_type="way",
+                osm_id="12345",
+                raw_payload={"mock": True},
+            )
+        return None
+
+
+class ProviderParsingTests(unittest.TestCase):
+    def test_nominatim_provider_uses_bounding_box_center_when_needed(self) -> None:
+        from backend.location.providers import _bounding_box_center, _pick_best_nominatim_item
+
+        self.assertEqual(_bounding_box_center(["40.0", "42.0", "-74.0", "-72.0"]), (41.0, -73.0))
+        chosen = _pick_best_nominatim_item(
+            [
+                {"display_name": "Weak Result", "address": {}, "boundingbox": ["40.0", "42.0", "-74.0", "-72.0"]},
+                {"display_name": "Strong Result", "lat": "40.7216", "lon": "-73.9582", "address": {"city": "Brooklyn", "country": "United States"}},
+            ]
+        )
+        self.assertEqual(chosen["display_name"], "Strong Result")
+
+    def test_resolution_tries_multiple_geocode_queries_for_addresses(self) -> None:
+        provider = QueryVariantProvider()
+        service = LodgingResolutionService(
+            AppConfig(booking_fetch_enabled=False, geocoding_enabled=True),
+            nominatim_provider=provider,
+        )
+
+        result = service.resolve("97 Wythe Ave, Brooklyn, NY 11249, United States")
+
+        self.assertEqual(result.location_context.latitude, 40.7216)
+        self.assertIn("97 Wythe Ave, Brooklyn", provider.queries)
 
 
 if __name__ == "__main__":
