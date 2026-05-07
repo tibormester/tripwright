@@ -24,6 +24,8 @@ except ModuleNotFoundError:
 
 
 TRAVEL_OPTIONS = build_travel_options()
+WRAP_UP_REMINDER_USER_TURN_THRESHOLD = 5
+WRAP_UP_REMINDER_METADATA_KEY = "__wrap_up_reminder_shown"
 
 
 def initialize_conversation(
@@ -80,6 +82,7 @@ def run_turn(
         _append_turn(state, speaker="User", dialogue=cleaned_input)
 
     _append_npc_turn(state)
+    _append_wrap_up_narrator_hint_if_needed(state)
     return state
 
 
@@ -173,6 +176,30 @@ def _finish_conversation(state: ConversationState) -> None:
 
 def _append_turn(state: ConversationState, *, speaker: str, dialogue: str) -> None:
     state.conversation_history.append(DialogueTurn(speaker=speaker, dialogue=dialogue))
+
+
+def _append_wrap_up_narrator_hint_if_needed(state: ConversationState) -> None:
+    if is_travel_selection_location(state.location):
+        return
+    if state.hidden_metadata.get(WRAP_UP_REMINDER_METADATA_KEY):
+        return
+    if _count_user_turns(state) <= WRAP_UP_REMINDER_USER_TURN_THRESHOLD:
+        return
+
+    npc_name = (state.npc_profile.name or "the local").strip() or "the local"
+    _append_turn(
+        state,
+        speaker="Narrator",
+        dialogue=(
+            f"The smile on {npc_name}'s face feels a little strained. "
+            "You're itching to go. It might be time to wrap up the conversation and say bye."
+        ),
+    )
+    state.hidden_metadata[WRAP_UP_REMINDER_METADATA_KEY] = "true"
+
+
+def _count_user_turns(state: ConversationState) -> int:
+    return sum(1 for turn in state.conversation_history if turn.speaker == "User" and turn.dialogue.strip())
 
 
 def _append_system_turn(state: ConversationState, message: str) -> None:

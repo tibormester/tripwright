@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha256
+import os
 from pathlib import Path
 from typing import Any
 
@@ -59,13 +60,14 @@ def build_scene_asset_spec(*, location: str, narrator_text: str, label: str | No
     slug = _slugify(normalized_location) or "scene"
     digest = _hash_parts(normalized_location, normalized_narration)
     key = f"{slug}-{digest}"
+    extension = _preferred_image_extension()
 
     return ImageAssetSpec(
         kind="scene_background",
         key=key,
         label=label or normalized_location.title(),
         prompt=build_scene_image_prompt(location=normalized_location, narrator_text=normalized_narration),
-        relative_path=f"generated/scenes/{key}.png",
+        relative_path=f"generated/scenes/{key}.{extension}",
         metadata_relative_path=f"generated/scenes/{key}.json",
         source={
             "location": normalized_location,
@@ -87,13 +89,14 @@ def build_npc_asset_spec(npc_profile: NPCProfile) -> ImageAssetSpec:
         npc_profile.local_flavor,
     )
     key = f"{slug}-{digest}"
+    extension = _preferred_image_extension()
 
     return ImageAssetSpec(
         kind="npc_headshot",
         key=key,
         label=name,
         prompt=build_npc_headshot_prompt(npc_profile),
-        relative_path=f"generated/npcs/{key}.png",
+        relative_path=f"generated/npcs/{key}.{extension}",
         metadata_relative_path=f"generated/npcs/{key}.json",
         source={
             "name": name,
@@ -254,15 +257,17 @@ def _travel_command_number(location_id: str) -> int:
 
 
 def _describe_runtime_asset(spec: ImageAssetSpec, fallback_spec: ImageAssetSpec | None = None) -> dict[str, Any]:
-    exists = spec.output_path.is_file()
-    fallback_exists = bool(fallback_spec and fallback_spec.output_path.is_file())
+    resolved_spec = _resolve_existing_asset_spec(spec)
+    resolved_fallback_spec = _resolve_existing_asset_spec(fallback_spec) if fallback_spec is not None else None
+    exists = resolved_spec is not None
+    fallback_exists = resolved_fallback_spec is not None
 
-    if exists:
-        resolved_url = spec.url_path
-        resolved_relative_path = spec.relative_path
-    elif fallback_exists and fallback_spec is not None:
-        resolved_url = fallback_spec.url_path
-        resolved_relative_path = fallback_spec.relative_path
+    if resolved_spec is not None:
+        resolved_url = resolved_spec.url_path
+        resolved_relative_path = resolved_spec.relative_path
+    elif resolved_fallback_spec is not None:
+        resolved_url = resolved_fallback_spec.url_path
+        resolved_relative_path = resolved_fallback_spec.relative_path
     else:
         resolved_url = None
         resolved_relative_path = spec.relative_path
@@ -272,23 +277,41 @@ def _describe_runtime_asset(spec: ImageAssetSpec, fallback_spec: ImageAssetSpec 
         "exists": exists,
         "url": resolved_url,
         "relative_path": resolved_relative_path,
-        "fallback_url": fallback_spec.url_path if fallback_exists and fallback_spec is not None else None,
+        "fallback_url": resolved_fallback_spec.url_path if resolved_fallback_spec is not None else None,
         "using_fallback": not exists and fallback_exists,
     }
 
 
 def _describe_asset(spec: ImageAssetSpec) -> dict[str, Any]:
-    exists = spec.output_path.is_file()
+    resolved_spec = _resolve_existing_asset_spec(spec)
+    effective_spec = resolved_spec or spec
     return {
         "kind": spec.kind,
         "key": spec.key,
         "label": spec.label,
-        "exists": exists,
-        "url": spec.url_path,
-        "relative_path": spec.relative_path,
+        "exists": resolved_spec is not None,
+        "url": effective_spec.url_path,
+        "relative_path": effective_spec.relative_path,
         "metadata_relative_path": spec.metadata_relative_path,
         "source": spec.source,
     }
+
+
+def _resolve_existing_asset_spec(spec: ImageAssetSpec | None) -> ImageAssetSpec | None:
+    if spec is None:
+        return None
+    if spec.output_path.is_file():
+        return spec
+
+    base_path = Path(spec.relative_path)
+    stem = base_path.stem
+    parent = base_path.parent
+    for extension in _candidate_image_extensions(preferred=_preferred_image_extension()):
+        alternate_relative_path = str(parent / f"{stem}.{extension}").replace('\\', '/')
+        alternate_output_path = PUBLIC_ROOT / alternate_relative_path
+        if alternate_output_path.is_file():
+            return replace(spec, relative_path=alternate_relative_path)
+    return None
 
 
 def _extract_scene_category(state: ConversationState) -> str:
@@ -355,6 +378,30 @@ def _strip_travel_selection_suffix(location: str) -> str:
     if location.endswith(TRAVEL_SELECTION_SUFFIX):
         return location[: -len(TRAVEL_SELECTION_SUFFIX)].rstrip()
     return location
+
+
+def _preferred_image_extension() -> str:
+    preferred = os.environ.get("INLINE_IMAGE_OUTPUT_FORMAT", os.environ.get("OPENAI_IMAGE_OUTPUT_FORMAT", "jpeg"))
+    return _normalize_image_extension(preferred)
+
+
+def _candidate_image_extensions(*, preferred: str) -> tuple[str, ...]:
+    ordered = [preferred, "png", "jpg", "jpeg", "webp"]
+    unique: list[str] = []
+    for extension in ordered:
+        normalized = _normalize_image_extension(extension)
+        if normalized not in unique:
+            unique.append(normalized)
+    return tuple(unique)
+
+
+def _normalize_image_extension(value: str) -> str:
+    normalized = (value or "").strip().lower()
+    if normalized in {"jpg", "jpeg"}:
+        return "jpg"
+    if normalized in {"png", "webp"}:
+        return normalized
+    return "jpg"
 
 
 def _hash_parts(*parts: str) -> str:

@@ -195,6 +195,8 @@ def _inject_inline_runtime_images(state: ConversationState, payload: dict) -> No
                     specs=missing_specs,
                     model=config.inline_image_model,
                     size=config.inline_image_size,
+                    quality=config.inline_image_quality,
+                    output_format=config.inline_image_output_format,
                     best_effort=True,
                 )
             )
@@ -243,6 +245,8 @@ def _inject_inline_image_for_travel_option(option_payload: dict[str, str], optio
                     specs=[scene_spec],
                     model=config.inline_image_model,
                     size=config.inline_image_size,
+                    quality=config.inline_image_quality,
+                    output_format=config.inline_image_output_format,
                     best_effort=True,
                 )
             )
@@ -293,8 +297,10 @@ def _best_effort_generate_runtime_assets(state: ConversationState) -> None:
             specs=specs,
             force=False,
             dry_run=False,
-            model="gpt-image-1",
-            size="1024x1024",
+            model=config.inline_image_model,
+            size=config.inline_image_size,
+            quality=config.inline_image_quality,
+            output_format=config.inline_image_output_format,
             best_effort=True,
         )
     except Exception as exc:  # pragma: no cover - best effort only
