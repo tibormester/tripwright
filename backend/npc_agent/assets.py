@@ -257,12 +257,22 @@ def _travel_command_number(location_id: str) -> int:
 def _describe_runtime_asset(spec: ImageAssetSpec, fallback_spec: ImageAssetSpec | None = None) -> dict[str, Any]:
     exists = spec.output_path.is_file()
     fallback_exists = bool(fallback_spec and fallback_spec.output_path.is_file())
-    resolved_spec = spec if exists or not fallback_exists else fallback_spec
+
+    if exists:
+        resolved_url = spec.url_path
+        resolved_relative_path = spec.relative_path
+    elif fallback_exists and fallback_spec is not None:
+        resolved_url = fallback_spec.url_path
+        resolved_relative_path = fallback_spec.relative_path
+    else:
+        resolved_url = None
+        resolved_relative_path = spec.relative_path
+
     return {
         "key": spec.key,
         "exists": exists,
-        "url": resolved_spec.url_path if resolved_spec else None,
-        "relative_path": resolved_spec.relative_path if resolved_spec else spec.relative_path,
+        "url": resolved_url,
+        "relative_path": resolved_relative_path,
         "fallback_url": fallback_spec.url_path if fallback_exists and fallback_spec is not None else None,
         "using_fallback": not exists and fallback_exists,
     }
@@ -284,7 +294,10 @@ def _describe_asset(spec: ImageAssetSpec) -> dict[str, Any]:
 
 def _extract_scene_category(state: ConversationState) -> str:
     system_context = state.system_context if isinstance(state.system_context, dict) else {}
-    return str(system_context.get("scene_category", "")).strip().lower()
+    category = str(system_context.get("scene_category", "")).strip().lower()
+    if category:
+        return category
+    return _infer_category_from_role(state.npc_profile.role)
 
 
 def _build_fallback_scene_asset_spec(category: str) -> ImageAssetSpec | None:
@@ -353,6 +366,17 @@ def _hash_parts(*parts: str) -> str:
 def _slugify(value: str) -> str:
     words = "".join(ch.lower() if ch.isalnum() else " " for ch in value).split()
     return "-".join(words[:8])
+
+
+def _infer_category_from_role(role: str) -> str:
+    normalized = (role or "").strip().lower()
+    if "barista" in normalized or "cafe" in normalized or "coffee" in normalized:
+        return "cafe"
+    if "book" in normalized or "clerk" in normalized or "reading" in normalized:
+        return "bookstore"
+    if "guide" in normalized or "promenade" in normalized or "park" in normalized:
+        return "park"
+    return "lodging"
 
 
 def _humanize_location(location: str) -> str:

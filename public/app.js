@@ -211,7 +211,7 @@ function renderScene() {
   const scene = rendering.scene || {};
   const npc = rendering.npc || {};
   const background = scene.background || {};
-  const backgroundUrl = background.url || null;
+  const backgroundUrl = resolveAssetUrl(background);
 
   elements.sceneLabel.textContent = scene.label || (state.startupVisible ? "TripWright" : "Unknown Scene");
   elements.sceneLocation.textContent = scene.location || (state.startupVisible
@@ -236,7 +236,8 @@ function renderScene() {
 function renderConversation() {
   const history = getDisplayHistory();
   const npcName = state.conversation?.npc_profile?.name;
-  const npcHeadshotUrl = state.conversation?.rendering?.npc?.headshot?.url || null;
+  const npcHeadshot = state.conversation?.rendering?.npc?.headshot || null;
+  const npcHeadshotUrl = resolveAssetUrl(npcHeadshot);
 
   elements.chatLog.innerHTML = "";
 
@@ -280,6 +281,17 @@ function renderConversation() {
       message.classList.add("has-avatar");
       avatar.hidden = false;
       avatarImage.src = avatarUrl;
+      avatarImage.dataset.fallbackUrl = resolveFallbackAssetUrl(npcHeadshot) || "";
+      avatarImage.onerror = () => {
+        const fallbackUrl = avatarImage.dataset.fallbackUrl;
+        if (fallbackUrl && avatarImage.src !== new URL(fallbackUrl, window.location.origin).href) {
+          avatarImage.src = fallbackUrl;
+          return;
+        }
+        avatarImage.hidden = true;
+        avatarFallback.textContent = (speaker || "?").charAt(0).toUpperCase();
+        avatarFallback.hidden = false;
+      };
       avatarImage.hidden = false;
       avatarFallback.hidden = true;
     } else if (kind === "npc") {
@@ -315,8 +327,9 @@ function renderTravelOptions() {
 
     const thumb = document.createElement("div");
     thumb.className = "travel-thumb";
-    if (option?.background?.url) {
-      thumb.style.backgroundImage = `linear-gradient(rgba(75, 52, 28, 0.14), rgba(39, 26, 14, 0.24)), url('${option.background.url}')`;
+    const optionBackgroundUrl = resolveAssetUrl(option?.background);
+    if (optionBackgroundUrl) {
+      thumb.style.backgroundImage = `linear-gradient(rgba(75, 52, 28, 0.14), rgba(39, 26, 14, 0.24)), url('${optionBackgroundUrl}')`;
     }
 
     const copy = document.createElement("div");
@@ -414,6 +427,29 @@ function getSpeakerAvatarUrl({ speaker, kind, npcHeadshotUrl }) {
   }
 
   return SPEAKER_AVATARS[speaker] || null;
+}
+
+function resolveAssetUrl(asset) {
+  if (!asset || typeof asset !== "object") {
+    return null;
+  }
+  if (asset.using_fallback && asset.fallback_url) {
+    return asset.fallback_url;
+  }
+  if (asset.exists && asset.url) {
+    return asset.url;
+  }
+  if (!asset.exists && asset.fallback_url) {
+    return asset.fallback_url;
+  }
+  return asset.url || null;
+}
+
+function resolveFallbackAssetUrl(asset) {
+  if (!asset || typeof asset !== "object") {
+    return null;
+  }
+  return asset.fallback_url || null;
 }
 
 function smoothScrollChatToBottom() {
