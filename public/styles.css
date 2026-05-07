@@ -529,7 +529,9 @@ p {
 .composer[hidden],
 .travel-panel[hidden],
 .startup-panel[hidden],
-.chat-panel[hidden] {
+.chat-panel[hidden],
+.world-loading-modal[hidden],
+.travel-progress[hidden] {
   display: none !important;
 }
 
