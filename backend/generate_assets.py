@@ -21,8 +21,10 @@ from backend.npc_agent.openai_utils import load_env_file
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_IMAGE_MODEL = "gpt-image-1"
-DEFAULT_IMAGE_SIZE = "1024x1024"
+DEFAULT_IMAGE_MODEL = "gpt-image-2"
+DEFAULT_IMAGE_SIZE = "816x816"
+DEFAULT_IMAGE_QUALITY = "low"
+DEFAULT_IMAGE_OUTPUT_FORMAT = "jpeg"
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,13 +57,32 @@ def parse_args() -> argparse.Namespace:
         default=os.getenv("OPENAI_IMAGE_SIZE", DEFAULT_IMAGE_SIZE),
         help="Requested image size.",
     )
+    parser.add_argument(
+        "--quality",
+        default=os.getenv("OPENAI_IMAGE_QUALITY", DEFAULT_IMAGE_QUALITY),
+        help="Requested image quality.",
+    )
+    parser.add_argument(
+        "--output-format",
+        dest="output_format",
+        default=os.getenv("OPENAI_IMAGE_OUTPUT_FORMAT", DEFAULT_IMAGE_OUTPUT_FORMAT),
+        help="Requested image output format.",
+    )
     return parser.parse_args()
 
 
-def generate_assets(*, kind: str, force: bool, dry_run: bool, model: str, size: str) -> None:
+def generate_assets(*, kind: str, force: bool, dry_run: bool, model: str, size: str, quality: str, output_format: str) -> None:
     ensure_generated_directories()
     specs = build_static_asset_specs(kind)
-    generate_asset_specs(specs=specs, force=force, dry_run=dry_run, model=model, size=size)
+    generate_asset_specs(
+        specs=specs,
+        force=force,
+        dry_run=dry_run,
+        model=model,
+        size=size,
+        quality=quality,
+        output_format=output_format,
+    )
 
 
 def generate_asset_specs(
@@ -71,6 +92,8 @@ def generate_asset_specs(
     dry_run: bool,
     model: str,
     size: str,
+    quality: str,
+    output_format: str,
     best_effort: bool = False,
 ) -> None:
     ensure_generated_directories()
@@ -99,8 +122,22 @@ def generate_asset_specs(
 
         print(f"[generate] {spec.kind}: {spec.label}")
         try:
-            image_bytes = _generate_image_bytes(client=client, prompt=spec.prompt, model=model, size=size)
-            _write_asset_files(spec=spec, image_bytes=image_bytes, model=model, size=size)
+            image_bytes = _generate_image_bytes(
+                client=client,
+                prompt=spec.prompt,
+                model=model,
+                size=size,
+                quality=quality,
+                output_format=output_format,
+            )
+            _write_asset_files(
+                spec=spec,
+                image_bytes=image_bytes,
+                model=model,
+                size=size,
+                quality=quality,
+                output_format=output_format,
+            )
             print(f"[saved] {spec.output_path}")
         except Exception as exc:
             logger.warning("file asset generation failed | kind=%s | label=%s | size=%s | error=%s", spec.kind, spec.label, size, exc)
@@ -113,6 +150,8 @@ def generate_inline_asset_data_urls(
     specs: list[ImageAssetSpec],
     model: str,
     size: str,
+    quality: str,
+    output_format: str,
     best_effort: bool = False,
 ) -> dict[str, str]:
     if not specs:
@@ -128,8 +167,18 @@ def generate_inline_asset_data_urls(
     generated: dict[str, str] = {}
     for spec in specs:
         try:
-            image_bytes = _generate_image_bytes(client=client, prompt=spec.prompt, model=model, size=size)
-            generated[f"{spec.kind}:{spec.key}"] = f"data:image/png;base64,{base64.b64encode(image_bytes).decode('ascii')}"
+            image_bytes = _generate_image_bytes(
+                client=client,
+                prompt=spec.prompt,
+                model=model,
+                size=size,
+                quality=quality,
+                output_format=output_format,
+            )
+            generated[f"{spec.kind}:{spec.key}"] = (
+                f"data:{_mime_type_for_output_format(output_format)};base64,"
+                f"{base64.b64encode(image_bytes).decode('ascii')}"
+            )
         except Exception as exc:
             logger.warning("inline asset generation failed | kind=%s | label=%s | size=%s | error=%s", spec.kind, spec.label, size, exc)
             if not best_effort:
@@ -229,11 +278,13 @@ def _build_openai_client():
     return OpenAI(api_key=api_key)
 
 
-def _generate_image_bytes(*, client, prompt: str, model: str, size: str) -> bytes:
+def _generate_image_bytes(*, client, prompt: str, model: str, size: str, quality: str, output_format: str) -> bytes:
     response = client.images.generate(
         model=model,
         prompt=prompt,
         size=size,
+        quality=quality,
+        output_format=output_format,
     )
 
     if not getattr(response, "data", None):
@@ -252,7 +303,7 @@ def _generate_image_bytes(*, client, prompt: str, model: str, size: str) -> byte
     raise RuntimeError("Image API response did not contain b64_json or url image data.")
 
 
-def _write_asset_files(*, spec: ImageAssetSpec, image_bytes: bytes, model: str, size: str) -> None:
+def _write_asset_files(*, spec: ImageAssetSpec, image_bytes: bytes, model: str, size: str, quality: str, output_format: str) -> None:
     spec.output_path.parent.mkdir(parents=True, exist_ok=True)
     spec.metadata_path.parent.mkdir(parents=True, exist_ok=True)
     spec.output_path.write_bytes(image_bytes)
@@ -263,12 +314,23 @@ def _write_asset_files(*, spec: ImageAssetSpec, image_bytes: bytes, model: str, 
         "label": spec.label,
         "model": model,
         "size": size,
+        "quality": quality,
+        "output_format": output_format,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "relative_path": spec.relative_path,
         "prompt": spec.prompt,
         "source": spec.source,
     }
     spec.metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+
+def _mime_type_for_output_format(output_format: str) -> str:
+    normalized = (output_format or "").strip().lower()
+    if normalized in {"jpg", "jpeg"}:
+        return "image/jpeg"
+    if normalized == "webp":
+        return "image/webp"
+    return "image/png"
 
 
 if __name__ == "__main__":
@@ -279,4 +341,6 @@ if __name__ == "__main__":
         dry_run=args.dry_run,
         model=args.model,
         size=args.size,
+        quality=args.quality,
+        output_format=args.output_format,
     )

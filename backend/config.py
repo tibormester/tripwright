@@ -19,8 +19,10 @@ class AppConfig:
     search_enabled: bool = True
     enable_image_generation: bool = False
     enable_inline_image_data: bool = False
-    inline_image_model: str = "gpt-image-1"
-    inline_image_size: str = "1024x1024"
+    inline_image_model: str = "gpt-image-2"
+    inline_image_size: str = "816x816"
+    inline_image_quality: str = "low"
+    inline_image_output_format: str = "jpeg"
     research_max_agent_steps: int = 3
 
     @classmethod
@@ -36,8 +38,10 @@ class AppConfig:
             search_enabled=_read_bool_env("ENABLE_SEARCH", True),
             enable_image_generation=_read_bool_env("ENABLE_IMAGE_GENERATION", False),
             enable_inline_image_data=_read_bool_env("ENABLE_INLINE_IMAGE_DATA", False),
-            inline_image_model=os.environ.get("INLINE_IMAGE_MODEL", os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-1")).strip() or "gpt-image-1",
-            inline_image_size=os.environ.get("INLINE_IMAGE_SIZE", "1024x1024").strip() or "1024x1024",
+            inline_image_model=os.environ.get("INLINE_IMAGE_MODEL", os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-2")).strip() or "gpt-image-2",
+            inline_image_size=os.environ.get("INLINE_IMAGE_SIZE", os.environ.get("OPENAI_IMAGE_SIZE", "816x816")).strip() or "816x816",
+            inline_image_quality=os.environ.get("INLINE_IMAGE_QUALITY", os.environ.get("OPENAI_IMAGE_QUALITY", "low")).strip() or "low",
+            inline_image_output_format=os.environ.get("INLINE_IMAGE_OUTPUT_FORMAT", os.environ.get("OPENAI_IMAGE_OUTPUT_FORMAT", "jpeg")).strip().lower() or "jpeg",
             research_max_agent_steps=_read_int_env("RESEARCH_MAX_AGENT_STEPS", 3),
         )
 

@@ -84,8 +84,8 @@ class AppIntegrationTests(unittest.TestCase):
 
         self.inline_image_patcher = patch(
             "backend.app.generate_inline_asset_data_urls",
-            side_effect=lambda specs, model, size, best_effort=False: {
-                f"{spec.kind}:{spec.key}": "data:image/png;base64,dGVzdA==" for spec in specs
+            side_effect=lambda specs, model, size, quality, output_format, best_effort=False: {
+                f"{spec.kind}:{spec.key}": "data:image/jpeg;base64,dGVzdA==" for spec in specs
             },
         )
         self.inline_image_patch = self.inline_image_patcher.start()
@@ -110,6 +110,7 @@ class AppIntegrationTests(unittest.TestCase):
         self.assertEqual(len(payload["world"]["travel_scenes"]), 3)
         self.assertEqual(payload["conversation"]["world_id"], payload["world_id"])
         self.assertIn("research_report", payload["conversation"]["system_context"])
+        self.assertTrue(payload["conversation"]["rendering"]["scene"]["background"]["url"].startswith("data:image/jpeg;base64,"))
 
     def test_world_initialize_with_booking_url_and_cache_reuse(self) -> None:
         booking_url = "https://www.booking.com/hotel/us/the-hoxton-williamsburg.html"
@@ -158,6 +159,28 @@ class AppIntegrationTests(unittest.TestCase):
         ).get_json()
         self.assertIsNotNone(chunk["option"])
         self.assertEqual(chunk["progress"]["loaded"], 1)
+
+    def test_long_conversation_gets_narrator_wrap_up_hint(self) -> None:
+        initialized = self.client.post("/world/initialize", json={"lodging_input": "The Hoxton Williamsburg"}).get_json()
+        state = initialized["conversation"]
+
+        for index in range(6):
+            response = self.client.post(
+                "/conversation/turn",
+                json={
+                    "state": state,
+                    "world_id": initialized["world_id"],
+                    "user_input": f"turn {index + 1}",
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            state = response.get_json()
+
+        narrator_turns = [
+            turn for turn in state["conversation_history"] if turn.get("speaker") == "Narrator"
+        ]
+        self.assertTrue(narrator_turns)
+        self.assertIn("might be time to wrap up the conversation and say bye", narrator_turns[-1]["dialogue"])
 
     def test_unknown_world_id_returns_404(self) -> None:
         initialized = self.client.post("/world/initialize", json={"lodging_input": "The Hoxton Williamsburg"}).get_json()
