@@ -8,7 +8,11 @@ from flask import Flask, jsonify, request
 
 try:
     from backend.config import AppConfig
-    from backend.generate_assets import build_runtime_specs_for_scene, generate_asset_specs
+    from backend.generate_assets import (
+        build_runtime_specs_for_scene,
+        generate_asset_specs,
+        generate_inline_asset_data_urls,
+    )
     from backend.location import DestinationSelector, LodgingResolutionService
     from backend.location.providers import OverpassProvider
     from backend.npc_agent.agent import initialize_conversation, run_turn, start_conversation
@@ -20,7 +24,7 @@ try:
     from backend.world_store import build_canonical_lodging_fingerprint, create_world_store
 except ModuleNotFoundError:
     from config import AppConfig
-    from generate_assets import build_runtime_specs_for_scene, generate_asset_specs
+    from generate_assets import build_runtime_specs_for_scene, generate_asset_specs, generate_inline_asset_data_urls
     from location import DestinationSelector, LodgingResolutionService
     from location.providers import OverpassProvider
     from npc_agent.agent import initialize_conversation, run_turn, start_conversation
@@ -49,6 +53,7 @@ destination_selector = DestinationSelector(
 )
 research_service = ResearchService(config)
 world_builder = WorldBuilder()
+inline_image_cache: dict[str, str] = {}
 
 
 def _find_last_turn(turns: list[DialogueTurn], *, speaker: str) -> DialogueTurn | None:
@@ -122,11 +127,67 @@ def _log_conversation_state(
 def _serialize_state_payload(state: ConversationState) -> dict:
     payload = state.to_dict()
     payload["rendering"] = build_rendering_context(state)
+    _inject_inline_runtime_images(state, payload)
     return payload
 
 
 def _serialize_state_response(state: ConversationState):
     return jsonify(_serialize_state_payload(state))
+
+
+def _inject_inline_runtime_images(state: ConversationState, payload: dict) -> None:
+    if not config.enable_inline_image_data:
+        return
+
+    try:
+        narrator_text = ""
+        if isinstance(state.system_context, dict):
+            narrator_text = str(state.system_context.get("narrator_text", ""))
+
+        specs = build_runtime_specs_for_scene(
+            scene_label=state.scene_label,
+            location=state.location,
+            narrator_text=narrator_text,
+            npc_profile=state.npc_profile,
+            travel_options=None,
+        )
+        missing_specs = [spec for spec in specs if f"{spec.kind}:{spec.key}" not in inline_image_cache]
+        if missing_specs:
+            app.logger.info(
+                "inline image generation start | scene=%s | count=%s | size=%s",
+                state.scene_label,
+                len(missing_specs),
+                config.inline_image_size,
+            )
+            inline_image_cache.update(
+                generate_inline_asset_data_urls(
+                    specs=missing_specs,
+                    model=config.inline_image_model,
+                    size=config.inline_image_size,
+                    best_effort=True,
+                )
+            )
+
+        scene_spec = next((spec for spec in specs if spec.kind == "scene_background"), None)
+        npc_spec = next((spec for spec in specs if spec.kind == "npc_headshot"), None)
+
+        if scene_spec is not None:
+            scene_data_url = inline_image_cache.get(f"{scene_spec.kind}:{scene_spec.key}")
+            if scene_data_url:
+                payload["rendering"]["scene"]["background"]["url"] = scene_data_url
+                payload["rendering"]["scene"]["background"]["exists"] = True
+                payload["rendering"]["scene"]["background"]["using_fallback"] = False
+                payload["rendering"]["scene"]["background"]["inline"] = True
+
+        if npc_spec is not None:
+            npc_data_url = inline_image_cache.get(f"{npc_spec.kind}:{npc_spec.key}")
+            if npc_data_url:
+                payload["rendering"]["npc"]["headshot"]["url"] = npc_data_url
+                payload["rendering"]["npc"]["headshot"]["exists"] = True
+                payload["rendering"]["npc"]["headshot"]["using_fallback"] = False
+                payload["rendering"]["npc"]["headshot"]["inline"] = True
+    except Exception as exc:  # pragma: no cover - best effort only
+        app.logger.warning("inline image generation skipped | scene=%s | error=%s", state.scene_label, exc)
 
 
 @app.get("/")
@@ -145,7 +206,7 @@ def assets_manifest():
 
 
 def _best_effort_generate_runtime_assets(state: ConversationState) -> None:
-    if not config.enable_image_generation:
+    if not config.enable_image_generation or config.enable_inline_image_data:
         return
     try:
         narrator_text = ""

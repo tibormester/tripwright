@@ -103,6 +103,34 @@ def generate_asset_specs(
                 raise
 
 
+def generate_inline_asset_data_urls(
+    *,
+    specs: list[ImageAssetSpec],
+    model: str,
+    size: str,
+    best_effort: bool = False,
+) -> dict[str, str]:
+    if not specs:
+        return {}
+
+    try:
+        client = _build_openai_client()
+    except Exception:
+        if best_effort:
+            return {}
+        raise
+
+    generated: dict[str, str] = {}
+    for spec in specs:
+        try:
+            image_bytes = _generate_image_bytes(client=client, prompt=spec.prompt, model=model, size=size)
+            generated[f"{spec.kind}:{spec.key}"] = f"data:image/png;base64,{base64.b64encode(image_bytes).decode('ascii')}"
+        except Exception:
+            if not best_effort:
+                raise
+    return generated
+
+
 def build_runtime_specs_for_scene(
     *,
     scene_label: str,

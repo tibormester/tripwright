@@ -18,6 +18,9 @@ class AppConfig:
     overpass_enabled: bool = True
     search_enabled: bool = True
     enable_image_generation: bool = False
+    enable_inline_image_data: bool = False
+    inline_image_model: str = "gpt-image-1"
+    inline_image_size: str = "512x512"
     research_max_agent_steps: int = 3
 
     @classmethod
@@ -32,6 +35,9 @@ class AppConfig:
             overpass_enabled=_read_bool_env("ENABLE_OVERPASS", True),
             search_enabled=_read_bool_env("ENABLE_SEARCH", True),
             enable_image_generation=_read_bool_env("ENABLE_IMAGE_GENERATION", False),
+            enable_inline_image_data=_read_bool_env("ENABLE_INLINE_IMAGE_DATA", False),
+            inline_image_model=os.environ.get("INLINE_IMAGE_MODEL", os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-1")).strip() or "gpt-image-1",
+            inline_image_size=os.environ.get("INLINE_IMAGE_SIZE", "512x512").strip() or "512x512",
             research_max_agent_steps=_read_int_env("RESEARCH_MAX_AGENT_STEPS", 3),
         )
 
